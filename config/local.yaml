@@ -5,7 +5,7 @@ http_server:
   idle_timeout: 60s   # connection with client life time 
 db:
   username: "postgres"
-  password: "qwerty"
+  password: "postgres"
   address: "localhost:5432"
   dbname: "postgres"
   sslmode: "disable"

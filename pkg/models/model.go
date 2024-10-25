@@ -1,5 +1,6 @@
 package models
 
+// Database model
 type Cake struct {
 	ID 			int		`json:"id"`
 	Description string	`json:"description"`	
@@ -38,7 +39,6 @@ type Order struct {
 	OrderStatus 	string	`json:"order_status"`
 	UserID 			int		`json:"user_id"`
 	PaymentMethod 	string 	`json:"payment_method"`
-	DeliveryMethod 	string 	`json:"delivery_method"`
 }
 
 type OrderCake struct {
@@ -52,3 +52,5 @@ type Admin struct {
 	Username 		string 	`json:"username"`
 	PasswordHash 	string 	`json:"password_hash"`
 }
+
+// RequestModels

@@ -1,14 +1,16 @@
-package storage
+package service
 
 import "cakes-database-app/pkg/models"
 
-type Storage struct {
+type Service struct {
 	Authorization
 	OrderManager
 }
 
 type Authorization interface {
 	CreateUser(user models.User) (int, error)
+	GenerateToken(username, password string) (string, error)
+	ParseToken(token string) (int, error)
 }
 
 type OrderManager interface {
@@ -18,6 +20,3 @@ type OrderManager interface {
 	DeleteOrder(userID, orderID int) error
 }
 
-func NewStorage(/*db ...*/) *Storage {
-	return &Storage{}
-}
