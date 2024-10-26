@@ -2,8 +2,10 @@ package main
 
 import (
 	"cakes-database-app/pkg/config"
-	server "cakes-database-app/pkg/http-server"
-	"cakes-database-app/pkg/storage/pgsql"
+	server "cakes-database-app/pkg/server"
+	"cakes-database-app/pkg/service"
+	"cakes-database-app/pkg/storage"
+	"context"
 	"database/sql"
 	"log"
 
@@ -13,12 +15,15 @@ import (
 )
 
 func main() {
+
+	ctx := context.Background()
+
 	// TODO: config - cleanenv
 	cfg := config.MustLoad()
 	log.Printf("%s", cfg.DB.Address)
 
 	// TODO: database init
-	db, err := pgsql.NewDB(
+	db, err := storage.NewDB(
         cfg.DB.Username,
         cfg.DB.Password,
         cfg.DB.Address,
@@ -30,22 +35,24 @@ func main() {
     }
     defer db.Close()
 
-	err = Migrate()	
-	if err != nil {
-		log.Fatalf("Migration up error: %s", err.Error())
-	}
+	// err = Migrate()	
+	// if err != nil {
+	// 	log.Fatalf("Migration up error: %s", err.Error())
+	// }
 
 	// TODO: logger
 
-	// TODO: router
-	router := server.NewRouter()
-
+	// all layers
+	storage := storage.NewStorage(db)
+	services := service.NewService(storage)
+	router := server.NewHandler(services)
+	
 	// TODO: middleware
 	// router.Use() 
 
 	// TODO: run server
 	srv := &server.Server{}
-	err = srv.Run(router, cfg)
+	err = srv.Run(router.NewRouter(&ctx), cfg)
 	if err != nil {
 		log.Fatal("server starting error!")
 	}
