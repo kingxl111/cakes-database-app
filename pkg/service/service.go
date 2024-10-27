@@ -13,8 +13,8 @@ type Service struct {
 
 type Authorization interface {
 	CreateUser(user models.User) (int, error)
-	// GenerateToken(username, password string) (string, error)
-	// ParseToken(token string) (int, error)
+	GenerateToken(username, password string) (string, error)
+	ParseToken(token string) (int, error)
 }
 
 type OrderManager interface {

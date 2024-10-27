@@ -4,6 +4,7 @@ import (
 	"cakes-database-app/pkg/models"
 	"cakes-database-app/pkg/storage"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"log"
 
@@ -12,7 +13,7 @@ import (
 
 const (
 	salt = "jkaawken11elzc;d12k2Wfpcallsdhac"  // for hash
-	signingKey = "skdf12njx83xu39ck2d91cwjel"  // for jwt signing
+	signingKey = "kwoduehcziweligfj29kxz.8ck"  // for jwt signing
 )
 
 type tokenClaims struct {
@@ -42,40 +43,37 @@ func (s* AuthService) CreateUser(user models.User) (int, error) {
 	return s.stg.CreateUser(user)
 }
 
-// func (s* AuthService) GenerateToken(username, password string) (string, error) {
-// 	// get user from db
-// 	user, err := s.stg.GetUser(username, s.generatePasswordHash(password))
+func (s* AuthService) GenerateToken(username, password string) (string, error) {
+	// get user from db
+	userID, err := s.stg.GetUser(username, s.generatePasswordHash(password))
+	if err != nil {
+		return "", err
+	}
 
-// 	if err != nil {
-// 		return "", err
-// 	}
-
-// 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &tokenClaims{
-// 		UserId: user.Id,
-// 	})
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &tokenClaims{
+		UserId: userID,
+	})
 	
-// 	return token.SignedString([]byte(signingKey))
-// }
+	return token.SignedString([]byte(signingKey))
+}
 
-// func (s *AuthService) ParseToken(accessToken string) (int, error) {
+func (s *AuthService) ParseToken(accessToken string) (int, error) {
 
-// 	token, err := jwt.ParseWithClaims(accessToken, &tokenClaims{}, func(t *jwt.Token) (interface{}, error) {
-// 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-// 			return nil, errors.New("Invalid signing method")
-// 		}
-// 		return []byte(signingKey), nil
-// 	})
-	
+	token, err := jwt.ParseWithClaims(accessToken, &tokenClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("invalid signing method")
+		}
+		return []byte(signingKey), nil
+	})
+	if err != nil {
+		return 0, err
+	}
 
-// 	if err != nil {
-// 		return 0, err
-// 	}
+	claims, ok := token.Claims.(*tokenClaims)
+	if !ok || claims == nil {
+		return 0, errors.New("token claims are not of type *tokenClaims")
+	}
 
-// 	claims, ok := token.Claims.(*tokenClaims)
-// 	if !ok || claims == nil {
-// 		return 0, errors.New("token claims are not of type *tokenClaims")
-// 	}
-
-// 	return claims.UserId, nil
-// }
+	return claims.UserId, nil
+}
 

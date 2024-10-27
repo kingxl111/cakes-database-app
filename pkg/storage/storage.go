@@ -13,8 +13,7 @@ type Storage struct {
 
 type Authorization interface {
 	CreateUser(user models.User) (int, error)
-	// GenerateToken(username, password string) (string, error)
-	// ParseToken(token string) (int, error)
+	GetUser(username, password_hash string) (int, error)
 }
 
 type OrderManager interface {

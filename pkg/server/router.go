@@ -22,7 +22,7 @@ func (h *Handler) NewRouter(ctx *context.Context) http.Handler {
 	router.Route("/auth", func(r chi.Router) {
 		// TODO: implement handleFuncs 
 		r.Post("/sign-up", h.SignUp(ctx))
-		// r.Post("/sign-in", func(w http.ResponseWriter, r *http.Request) {})
+		r.Post("/sign-in", h.SignIn(ctx))
 	})
 
 	// TODO: add other groups

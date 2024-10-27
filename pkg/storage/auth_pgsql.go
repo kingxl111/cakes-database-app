@@ -3,7 +3,6 @@ package storage
 import (
 	"cakes-database-app/pkg/models"
 	"context"
-
 )
 
 type AuthPostgres struct {
@@ -28,4 +27,15 @@ func (a *AuthPostgres) CreateUser(user models.User) (int, error) {
         return 0, err
     }
     return userID, nil
+}
+
+func (a *AuthPostgres) GetUser(username, password_hash string) (int, error) {
+	var userID int
+	err := a.db.pool.QueryRow(context.Background(), 
+		"SELECT id FROM users WHERE username = $1 AND password_hash = $2", 
+		username, password_hash).Scan(&userID)
+	if err != nil {
+		return 0, err
+	}
+	return userID, nil
 }
