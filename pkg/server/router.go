@@ -20,12 +20,21 @@ func (h *Handler) NewRouter(ctx *context.Context) http.Handler {
 	router := chi.NewRouter()
 	// Auth group
 	router.Route("/auth", func(r chi.Router) {
-		// TODO: implement handleFuncs 
 		r.Post("/sign-up", h.SignUp(ctx))
 		r.Post("/sign-in", h.SignIn(ctx))
 	})
+	
+	// our new secure router will require jwt
+	apiRouter := chi.NewRouter()
+	apiRouter.Use(h.UserIdentityMiddleware()) 	// validate users
+	apiRouter.Route("/api", func(r chi.Router) {
+		r.Post("/make-order", h.MakeOrder(ctx))
+		r.Get("/view-order", func(w http.ResponseWriter, r *http.Request) {})
+		r.Post("/change-order", func(w http.ResponseWriter, r *http.Request) {})
+		r.Post("/delete-order", func(w http.ResponseWriter, r *http.Request) {})
+	})
 
-	// TODO: add other groups
+	router.Mount("/", apiRouter)
 
 	return router
 }

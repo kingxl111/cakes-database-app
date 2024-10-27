@@ -18,7 +18,7 @@ type Authorization interface {
 }
 
 type OrderManager interface {
-	// CreateOrder(order models.Order) (int, error)
+	CreateOrder(userID int, delivery models.Delivery, cakes []models.Cake, paymentMethod string) (int, error)
 	// GetOrder(userID, orderID int) (models.Order, error)
 	// UpdateOrder(userID int, orderID int, paymentMethod models.Order) error 
 	// DeleteOrder(userID, orderID int) error
@@ -27,7 +27,6 @@ type OrderManager interface {
 func NewService(storage *storage.Storage) *Service{
 	return &Service{
 		Authorization: NewAuthService(storage),
-		// TODO: 
+		OrderManager: NewOrderService(storage),
 	}
 }
-

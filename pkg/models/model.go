@@ -54,3 +54,9 @@ type Admin struct {
 }
 
 // RequestModels
+type MakeOrderRequest struct {
+	UserID		 int 		  `json:"userID"`
+    Delivery     Delivery     `json:"delivery"`     
+    Cakes        []Cake       `json:"cakes"`         
+    PaymentMethod string      `json:"paymentMethod"`
+}
