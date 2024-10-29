@@ -16,3 +16,7 @@ func NewOrderService(stg storage.OrderManager) *Order {
 func (o *Order) CreateOrder(userID int, delivery models.Delivery, cakes []models.Cake, paymentMethod string) (int, error) {
 	return o.stg.CreateOrder(userID, delivery, cakes,paymentMethod)
 }
+
+func (o *Order) GetOrders(userID int) (models.GetOrdersResponse, error) {
+	return o.stg.GetOrders(userID)	
+}

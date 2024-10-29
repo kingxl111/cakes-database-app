@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // Database model
 type Cake struct {
 	ID 			int		`json:"id"`
@@ -34,11 +36,12 @@ type DeliveryPoint struct {
 }
 
 type Order struct {
-	ID 				int 	`json:"id"`
-	Time 			string	`json:"time"`
-	OrderStatus 	string	`json:"order_status"`
-	UserID 			int		`json:"user_id"`
-	PaymentMethod 	string 	`json:"payment_method"`
+	ID 				int 		`json:"id"`
+	Time 			time.Time	`json:"time"`
+	OrderStatus 	string		`json:"order_status"`
+	UserID 			int			`json:"user_id"`
+	PaymentMethod 	string 		`json:"payment_method"`
+	Cost			int			`json:"cost"`
 }
 
 type OrderCake struct {
@@ -53,10 +56,39 @@ type Admin struct {
 	PasswordHash 	string 	`json:"password_hash"`
 }
 
+// Internal models
+
+type InternOrder struct {
+	Cakes []Cake
+	Ord Order
+}
+
+type GetOrdersResponse struct {
+	Orders []InternOrder
+}
+
 // RequestModels
 type MakeOrderRequest struct {
-	UserID		 int 		  `json:"userID"`
+	UserID		 int 		  `json:"user_id"`
     Delivery     Delivery     `json:"delivery"`     
     Cakes        []Cake       `json:"cakes"`         
-    PaymentMethod string      `json:"paymentMethod"`
+    PaymentMethod string      `json:"payment_method"`
+}
+
+type MakeOrderResponse struct {
+	OrderID 		int 	`json:"order_id"`
+	DeliveryTime 	string 	`json:"delivery_time"`
+}
+
+type ViewOrdersRequest struct {
+}
+
+type ViewOrdersResponse struct {
+	Orders				[]struct{
+		Cakes 				[]Cake		`json:"cakes"`
+		OrderRegisterTime 	time.Time 	`json:"order_register_time"`
+		PaymentMethod 		string  	`json:"payment_method"`
+		OrderStatus			string 		`json:"order_status"`
+		DelivPoint 			string 		`json:"delivery_point"`
+	} 									`json:"orders"`
 }

@@ -20,7 +20,7 @@ func main() {
 
 	// TODO: config - cleanenv
 	cfg := config.MustLoad()
-	log.Printf("%s", cfg.DB.Address)
+	log.Printf("database started on %s", cfg.DB.Address)
 
 	// TODO: database init
 	db, err := storage.NewDB(
@@ -52,6 +52,7 @@ func main() {
 
 	// TODO: run server
 	srv := &server.Server{}
+	log.Printf("server started on %s", cfg.HTTPServer.Address)
 	err = srv.Run(router.NewRouter(&ctx), cfg)
 	if err != nil {
 		log.Fatal("server starting error!")

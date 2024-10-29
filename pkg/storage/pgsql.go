@@ -9,13 +9,13 @@ import (
 
 // entities
 const (
-	userTable = 			"users"
-	deliveryTable = 		"delivery"
-	orderTable = 			"orders"
-	ordersCakesTable = 		"orders_cakes"
-	cakesTable = 			"cakes"
-	deliveryPointTable = 	"delivery_point"
-	adminTable = 			"administrators"
+	UserTable = 			"users"
+	DeliveryTable = 		"deliveries"
+	OrderTable = 			"orders"
+	OrdersCakesTable = 		"order_cakes"
+	CakesTable = 			"cakes"
+	DeliveryPointTable = 	"delivery_point"
+	AdminTable = 			"administrators"
 )
 
 type DB struct {

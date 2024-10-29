@@ -18,7 +18,7 @@ type Authorization interface {
 
 type OrderManager interface {
 	CreateOrder(userID int, delivery models.Delivery, cakes []models.Cake, paymentMethod string) (int, error)
-// 	GetOrder(userID, orderID int) (models.Order, error)
+	GetOrders(userID int) (models.GetOrdersResponse, error)
 // 	UpdateOrder(userID int, orderID int, paymentMethod models.Order) error 
 // 	DeleteOrder(userID, orderID int) error
 }

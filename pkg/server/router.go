@@ -29,7 +29,7 @@ func (h *Handler) NewRouter(ctx *context.Context) http.Handler {
 	apiRouter.Use(h.UserIdentityMiddleware()) 	// validate users
 	apiRouter.Route("/api", func(r chi.Router) {
 		r.Post("/make-order", h.MakeOrder(ctx))
-		r.Get("/view-order", func(w http.ResponseWriter, r *http.Request) {})
+		r.Get("/view-orders", h.ViewOrders(ctx))
 		r.Post("/change-order", func(w http.ResponseWriter, r *http.Request) {})
 		r.Post("/delete-order", func(w http.ResponseWriter, r *http.Request) {})
 	})

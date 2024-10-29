@@ -23,7 +23,7 @@ func (h *Handler) MakeOrder(ctx *context.Context) http.HandlerFunc {
 		}
 		defer r.Body.Close()
 		
-		log.Printf("userID: %v\npayment_method: %v\n", req.UserID, req.PaymentMethod)
+		// log.Printf("userID: %v\npayment_method: %v\n", req.UserID, req.PaymentMethod)
 		orderID, err := h.services.OrderManager.CreateOrder(
 			userID.(int),
 			req.Delivery,
@@ -36,9 +36,43 @@ func (h *Handler) MakeOrder(ctx *context.Context) http.HandlerFunc {
 		}
 
 		w.WriteHeader(http.StatusOK)
-        jsonResponse := map[string]interface{}{
-            "orderID": orderID,
+        jsonResponse := models.MakeOrderResponse {
+            OrderID: orderID,
+			DeliveryTime: "few days",
         }
         json.NewEncoder(w).Encode(jsonResponse)
+	}
+}
+
+func (h *Handler) ViewOrders(ctx *context.Context) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "server.ViewOrders"
+
+		var req models.ViewOrdersRequest
+		err := render.DecodeJSON(r.Body, &req)
+		if err != nil {
+			log.Printf("error from operation: %s: %s", op, err.Error())
+			newErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		defer r.Body.Close()
+
+		userID  := r.Context().Value(userCtx)
+		var resp models.GetOrdersResponse
+		resp, err = h.services.OrderManager.GetOrders(userID.(int))
+		if err != nil {
+			log.Printf("error from operation: %s: %s", op, err.Error())
+			newErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return 
+		}
+
+        jsonData, err := json.Marshal(resp)
+		if err != nil {
+			log.Printf("error encoding into JSON: %v", err)
+			newErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonData)
 	}
 }

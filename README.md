@@ -7,8 +7,13 @@
 ![alt text](context_diagram.png)
 
 # Migrations:
+
 ```
-migrate -path "/path/to/migrations" -database "postgres://user:password@localhost:5432/dbname?sslmode=disable" down 1
+$ migrate create -ext sql -dir <migrations_dir> migration_name
+```
+
+```
+$ migrate -path "/path/to/migrations" -database "postgres://user:password@localhost:5432/dbname?sslmode=disable" down 1
 ```
 
 ```
