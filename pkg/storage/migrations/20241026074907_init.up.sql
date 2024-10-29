@@ -49,3 +49,10 @@ CREATE TABLE admins (
     username VARCHAR(50) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL
 );
+
+CREATE TABLE logs (
+    id SERIAL PRIMARY KEY,
+    level VARCHAR(10),
+    message TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

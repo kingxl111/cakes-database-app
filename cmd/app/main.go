@@ -8,20 +8,30 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"log/slog"
+	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
+const (
+	envLocal = "local"
+	envDev   = "dev"
+	envProd  = "prod"
+)
+
 func main() {
-
 	ctx := context.Background()
-
+	
 	// TODO: config - cleanenv
 	cfg := config.MustLoad()
 	log.Printf("database started on %s", cfg.DB.Address)
-
+	
+	// TODO: logger
+	logg := SetupLogger(cfg.Env)
+	
 	// TODO: database init
 	db, err := storage.NewDB(
         cfg.DB.Username,
@@ -40,20 +50,15 @@ func main() {
 	// 	log.Fatalf("Migration up error: %s", err.Error())
 	// }
 
-	// TODO: logger
-
 	// all layers
 	storage := storage.NewStorage(db)
 	services := service.NewService(storage)
 	router := server.NewHandler(services)
-	
-	// TODO: middleware
-	// router.Use() 
 
 	// TODO: run server
 	srv := &server.Server{}
 	log.Printf("server started on %s", cfg.HTTPServer.Address)
-	err = srv.Run(router.NewRouter(&ctx), cfg)
+	err = srv.Run(router.NewRouter(&ctx, logg, cfg.Env), cfg)
 	if err != nil {
 		log.Fatal("server starting error!")
 	}
@@ -91,4 +96,29 @@ func Migrate() error {
 
 	log.Printf("Applied migration: %d, Dirty %t\n", version, dirty)
 	return nil
+}
+
+func SetupLogger(env string) *slog.Logger {
+	var log *slog.Logger
+
+	switch env {
+	case envLocal:
+		log = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		)
+	case envDev:
+		log = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+		)
+	case envProd:
+		log = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+		)
+	default: // If env config is invalid, set prod settings by default due to security
+		log = slog.New(
+			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+		)
+	}
+
+	return log
 }

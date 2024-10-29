@@ -56,6 +56,12 @@ type Admin struct {
 	PasswordHash 	string 	`json:"password_hash"`
 }
 
+type LogEntry struct {
+	ID        int       `db:"id"`
+	Message   string    `db:"message"`
+	CreatedAt time.Time `db:"created_at"` 
+}
+
 // Internal models
 
 type InternOrder struct {
