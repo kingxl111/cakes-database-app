@@ -19,14 +19,17 @@ func NewHandler(services *service.Service) *Handler {
 
 func (h *Handler) NewRouter(ctx *context.Context, log *slog.Logger, env string) http.Handler {
 	log.Info(
-		"starting TheSweetsOfLifeApp",
+		"STARTING TheSweetsOfLifeApp",
 		slog.String("env", env),
 		slog.String("version", "1.0"),
 	)
 	log.Debug("debug messages are enabled")
+	if err := h.services.Logger.WriteLog(ctx, "INFO", "new router started!"); err != nil {
+		log.Info(err.Error())
+	}
 
 	router := chi.NewRouter()
-	router.Use()
+	router.Use(NewLogger(log))
 	// Auth group
 	router.Route("/auth", func(r chi.Router) {
 		r.Post("/sign-up", h.SignUp(ctx, log))

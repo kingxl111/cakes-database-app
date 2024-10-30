@@ -3,10 +3,11 @@ package service
 import (
 	"cakes-database-app/pkg/models"
 	"cakes-database-app/pkg/storage"
-
+	"context"
 )
 
 type Service struct {
+	Logger
 	Authorization
 	OrderManager
 }
@@ -24,9 +25,14 @@ type OrderManager interface {
 	// DeleteOrder(userID, orderID int) error
 }
 
+type Logger interface {
+	WriteLog(ctx *context.Context, level string, msg string) error 
+}
+
 func NewService(storage *storage.Storage) *Service{
 	return &Service{
 		Authorization: NewAuthService(storage),
 		OrderManager: NewOrderService(storage),
+		Logger: NewLoggerService(storage),
 	}
 }

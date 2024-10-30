@@ -4,20 +4,23 @@ import (
 	"cakes-database-app/pkg/models"
 	"context"
 	"encoding/json"
-	"net/http"
 	"log"
+	"net/http"
+	"strconv"
 
 	"github.com/go-chi/render"
 )
 
 func (h *Handler) MakeOrder(ctx *context.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "server.make-order: "
 		var req models.MakeOrderRequest
 		
 		userID := r.Context().Value(userCtx)  // getting user id from middleware's context
-		log.Println("userID from contextL ", userID)
+		// log.Println("userID from contextL ", userID)
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
+			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
             return
 		}
@@ -30,11 +33,13 @@ func (h *Handler) MakeOrder(ctx *context.Context) http.HandlerFunc {
 			req.Cakes,
 			req.PaymentMethod)
 		if err != nil {
-			log.Printf("Failed to create order: %v", err)
+			// log.Printf("Failed to create order: %v", err)
+			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return 
 		}
 
+		h.services.Logger.WriteLog(ctx, "INFO", op + "user: " + strconv.Itoa(userID.(int)))
 		w.WriteHeader(http.StatusOK)
         jsonResponse := models.MakeOrderResponse {
             OrderID: orderID,
@@ -46,12 +51,13 @@ func (h *Handler) MakeOrder(ctx *context.Context) http.HandlerFunc {
 
 func (h *Handler) ViewOrders(ctx *context.Context) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "server.ViewOrders"
+		const op = "server.view-orders: "
 
 		var req models.ViewOrdersRequest
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
 			log.Printf("error from operation: %s: %s", op, err.Error())
+			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -62,6 +68,7 @@ func (h *Handler) ViewOrders(ctx *context.Context) http.HandlerFunc {
 		resp, err = h.services.OrderManager.GetOrders(userID.(int))
 		if err != nil {
 			log.Printf("error from operation: %s: %s", op, err.Error())
+			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return 
 		}
@@ -69,10 +76,12 @@ func (h *Handler) ViewOrders(ctx *context.Context) http.HandlerFunc {
         jsonData, err := json.Marshal(resp)
 		if err != nil {
 			log.Printf("error encoding into JSON: %v", err)
+			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonData)
+		h.services.Logger.WriteLog(ctx, "INFO", op + "user: " + strconv.Itoa(userID.(int)))
 	}
 }

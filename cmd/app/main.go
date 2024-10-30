@@ -25,27 +25,27 @@ const (
 func main() {
 	ctx := context.Background()
 	
-	// TODO: config - cleanenv
+	// config - cleanenv
 	cfg := config.MustLoad()
-	log.Printf("database started on %s", cfg.DB.Address)
 	
-	// TODO: logger
+	// logger
 	logg := SetupLogger(cfg.Env)
 	
-	// TODO: database init
+	// database init
 	db, err := storage.NewDB(
-        cfg.DB.Username,
+		cfg.DB.Username,
         cfg.DB.Password,
         cfg.DB.Address,
         cfg.DB.DBName,
         cfg.DB.SSLmode,
     )
     if err != nil {
-        log.Fatalf("failed to connect to database: %s", err)
+		log.Fatalf("failed to connect to database: %s", err)
     }
     defer db.Close()
+	logg.Info("database started on", cfg.DB.Address)
 
-	// err = Migrate()	
+	// err = Migrate(logg)	
 	// if err != nil {
 	// 	log.Fatalf("Migration up error: %s", err.Error())
 	// }
@@ -55,46 +55,48 @@ func main() {
 	services := service.NewService(storage)
 	router := server.NewHandler(services)
 
-	// TODO: run server
+	// run server
 	srv := &server.Server{}
 	log.Printf("server started on %s", cfg.HTTPServer.Address)
 	err = srv.Run(router.NewRouter(&ctx, logg, cfg.Env), cfg)
 	if err != nil {
-		log.Fatal("server starting error!")
+		logg.Info("server starting error!")
+		return
 	}
 }	
 
-func Migrate() error {
+func Migrate(logg *slog.Logger) error {
 	dbURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
     db, err := sql.Open("postgres", dbURL)
     if err != nil {
-        log.Fatalf("Could not open database: %v", err)
+        logg.Error("Could not open database: ", err.Error())
+		return err
     }
 
     driver, err := postgres.WithInstance(db, &postgres.Config{})
     if err != nil {
-        log.Fatalf("Could not create driver: %v", err)
+        logg.Error("Could not create driver: %v", err)
     }
 
     m, err := migrate.NewWithDatabaseInstance(
         "file:///home/vadim/cakes-database-app/pkg/storage/pgsql/migrations",
         "postgres", driver)
 	if err != nil {
-		log.Fatalf("Could not create migrate instance: %v", err)
+		logg.Error("Could not create migrate instance: %v", err)
 	}
 
 	if err := m.Up(); err != nil {
-		log.Fatalf("Could not apply migrations: %v", err)
+		logg.Error("Could not apply migrations: %v", err)
 	}
 
-	log.Println("Migrations applied successfully")
+	logg.Info("Migrations applied successfully")
 
 	version, dirty, err := m.Version()
 	if err != nil {
-		log.Fatalf("New migration version error: %s", err.Error())
+		logg.Error("New migration version error: %s", err.Error())
 	}
 
-	log.Printf("Applied migration: %d, Dirty %t\n", version, dirty)
+	logg.Info("Applied migration: %d, Dirty %t\n", version, dirty)
 	return nil
 }
 

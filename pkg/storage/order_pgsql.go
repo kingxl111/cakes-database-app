@@ -39,7 +39,6 @@ func (o *OrderPostgres) CreateOrder(userID int, delivery models.Delivery, cakes 
 		getCostByIDQuery := `SELECT price FROM cakes WHERE id = $1`
 		err := tx.QueryRow(ctx, getCostByIDQuery, id).Scan(&price)
 		if err != nil {
-			log.Println("can't get prices from cakes table")
 			return 0, err
 		}
 

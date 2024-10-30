@@ -25,6 +25,7 @@ func (h *Handler) SignUp(c *context.Context, log *slog.Logger) http.HandlerFunc 
         err := render.DecodeJSON(r.Body, &req); 
         if err != nil {
             log.Info("error operation: %s: %s", op, err.Error())
+            h.services.Logger.WriteLog(c, "ERROR", op + err.Error())
             newErrorResponse(w, http.StatusBadRequest, err.Error())
             return
         }
@@ -32,10 +33,12 @@ func (h *Handler) SignUp(c *context.Context, log *slog.Logger) http.HandlerFunc 
         id, err := h.services.CreateUser(req)
         if err != nil {
             log.Info("error operation: %s: %s", op, err.Error())
+            h.services.Logger.WriteLog(c, "ERROR", op + err.Error())
             newErrorResponse(w, http.StatusBadRequest, err.Error())
             return
         }
         log.Info("new user registered: ", req.FullName, 1)
+        h.services.Logger.WriteLog(c, "INFO", op + ": new user registered: " + req.Username)
         w.WriteHeader(http.StatusOK)
         jsonResponse := map[string]interface{}{
             "id": id,
@@ -57,6 +60,7 @@ func (h *Handler) SignIn(c *context.Context, log *slog.Logger) http.HandlerFunc 
         err := render.DecodeJSON(r.Body, &input); 
         if err != nil {
             log.Info("error operation: %s: %s", op, err.Error())
+            h.services.Logger.WriteLog(c, "ERROR", op + err.Error())
             newErrorResponse(w, http.StatusBadRequest, err.Error())
             return
         }
@@ -64,11 +68,13 @@ func (h *Handler) SignIn(c *context.Context, log *slog.Logger) http.HandlerFunc 
         token, err := h.services.GenerateToken(input.Username, input.Password)
         if err != nil {
             log.Info("error operation: %s: %s", op, err.Error())
+            h.services.Logger.WriteLog(c, "ERROR", op + err.Error())
             newErrorResponse(w, http.StatusBadRequest, err.Error())
             return 
         }
 
         log.Info("generated token for user %s: %s", input.Username, token)
+        h.services.Logger.WriteLog(c, "INFO", op + ": user:" + input.Username)
         w.WriteHeader(http.StatusOK)
         jsonResponse := map[string]interface{}{
             "token": token,
