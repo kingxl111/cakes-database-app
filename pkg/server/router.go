@@ -24,7 +24,7 @@ func (h *Handler) NewRouter(ctx *context.Context, log *slog.Logger, env string) 
 		slog.String("version", "1.0"),
 	)
 	log.Debug("debug messages are enabled")
-	if err := h.services.Logger.WriteLog(ctx, "INFO", "new router started!"); err != nil {
+	if err := h.services.Logger.WriteLog("INFO", "new router started!"); err != nil {
 		log.Info(err.Error())
 	}
 
@@ -39,12 +39,14 @@ func (h *Handler) NewRouter(ctx *context.Context, log *slog.Logger, env string) 
 	// our new secure router will require jwt
 	apiRouter := chi.NewRouter()
 	apiRouter.Use(h.UserIdentityMiddleware()) 	// validate users
-	apiRouter.Use(NewLogger(log))
+	apiRouter.Use(NewLogger(log))	
 	apiRouter.Route("/api", func(r chi.Router) {
 		r.Post("/make-order", h.MakeOrder(ctx))
 		r.Get("/view-orders", h.ViewOrders(ctx))
 		r.Post("/change-order", func(w http.ResponseWriter, r *http.Request) {})
 		r.Post("/delete-order", func(w http.ResponseWriter, r *http.Request) {})
+
+		r.Get("/cakes", h.Cakes(ctx))
 	})
 
 	router.Mount("/", apiRouter)

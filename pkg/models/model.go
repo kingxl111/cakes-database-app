@@ -86,8 +86,7 @@ type MakeOrderResponse struct {
 	DeliveryTime 	string 	`json:"delivery_time"`
 }
 
-type ViewOrdersRequest struct {
-}
+type ViewOrdersRequest struct {}
 
 type ViewOrdersResponse struct {
 	Orders				[]struct{

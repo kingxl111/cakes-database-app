@@ -20,7 +20,7 @@ func (h *Handler) MakeOrder(ctx *context.Context) http.HandlerFunc {
 		// log.Println("userID from contextL ", userID)
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
-			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
+			h.services.Logger.WriteLog( "ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
             return
 		}
@@ -34,12 +34,13 @@ func (h *Handler) MakeOrder(ctx *context.Context) http.HandlerFunc {
 			req.PaymentMethod)
 		if err != nil {
 			// log.Printf("Failed to create order: %v", err)
-			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
+			h.services.Logger.WriteLog("ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return 
 		}
 
-		h.services.Logger.WriteLog(ctx, "INFO", op + "user: " + strconv.Itoa(userID.(int)))
+		h.services.Logger.WriteLog("INFO", op + "user: " + strconv.Itoa(userID.(int)))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
         jsonResponse := models.MakeOrderResponse {
             OrderID: orderID,
@@ -57,7 +58,7 @@ func (h *Handler) ViewOrders(ctx *context.Context) http.HandlerFunc {
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
 			log.Printf("error from operation: %s: %s", op, err.Error())
-			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
+			h.services.Logger.WriteLog("ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -68,7 +69,7 @@ func (h *Handler) ViewOrders(ctx *context.Context) http.HandlerFunc {
 		resp, err = h.services.OrderManager.GetOrders(userID.(int))
 		if err != nil {
 			log.Printf("error from operation: %s: %s", op, err.Error())
-			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
+			h.services.Logger.WriteLog( "ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return 
 		}
@@ -76,12 +77,13 @@ func (h *Handler) ViewOrders(ctx *context.Context) http.HandlerFunc {
         jsonData, err := json.Marshal(resp)
 		if err != nil {
 			log.Printf("error encoding into JSON: %v", err)
-			h.services.Logger.WriteLog(ctx, "ERROR", op + err.Error())
+			h.services.Logger.WriteLog("ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonData)
-		h.services.Logger.WriteLog(ctx, "INFO", op + "user: " + strconv.Itoa(userID.(int)))
+		h.services.Logger.WriteLog("INFO", op + "user: " + strconv.Itoa(userID.(int)))
 	}
 }

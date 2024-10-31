@@ -2,13 +2,13 @@ package storage
 
 import (
 	"cakes-database-app/pkg/models"
-	"context"
 )
 
 type Storage struct {
 	Logger
 	Authorization
 	OrderManager
+	CakeManager
 }
 
 type Authorization interface {
@@ -23,14 +23,19 @@ type OrderManager interface {
 // 	DeleteOrder(userID, orderID int) error
 }
 
+type CakeManager interface {
+	GetCakes() ([]models.Cake, error)
+}
+
 type Logger interface {
-	WriteLog(ctx *context.Context, level string, msg string) error 
+	WriteLog(level string, msg string) error 
 }
 
 func NewStorage(db *DB) *Storage {
 	return &Storage{
 		Authorization: NewAuthPostgres(db),
 		OrderManager: NewOrderPostgres(db),
+		CakeManager: NewCakeManagerPostgres(db),
 		Logger: NewLoggerPostgres(db),
 	}
 }
