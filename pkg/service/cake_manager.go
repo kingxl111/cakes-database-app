@@ -6,10 +6,10 @@ import (
 )
 
 type CakeService struct {
-	stg storage.CakeManager
+	stg storage.UserCakeManager
 }
 
-func NewCakeService(stg *storage.Storage) *CakeService {
+func NewCakeService(stg storage.UserCakeManager) *CakeService {
 	return &CakeService{stg: stg}
 } 
 

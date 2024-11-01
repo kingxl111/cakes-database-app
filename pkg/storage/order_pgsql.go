@@ -8,15 +8,15 @@ import (
 	"time"
 )
 
-type OrderPostgres struct {
+type UserOrderManagerPostgres struct {
 	db *DB
 }
 
-func NewOrderPostgres(db *DB) *OrderPostgres {
-	return &OrderPostgres{db: db}
+func NewUserOrderManagerPostgres(db *DB) *UserOrderManagerPostgres {
+	return &UserOrderManagerPostgres{db: db}
 }
 
-func (o *OrderPostgres) CreateOrder(userID int, delivery models.Delivery, cakes []models.Cake, paymentMethod string) (int, error) {
+func (o *UserOrderManagerPostgres) CreateOrder(userID int, delivery models.Delivery, cakes []models.Cake, paymentMethod string) (int, error) {
 	var orderID int
 	// tx begin
 	ctx := context.Background()
@@ -100,7 +100,7 @@ func (o *OrderPostgres) CreateOrder(userID int, delivery models.Delivery, cakes 
 	return orderID, nil
 }
 
-func (o *OrderPostgres) GetOrders(userID int) (models.GetOrdersResponse, error) {
+func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersResponse, error) {
 	const op = "pgsql.GetOrder"
 	var res models.GetOrdersResponse
 

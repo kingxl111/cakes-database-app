@@ -49,7 +49,40 @@ func (h *Handler) NewRouter(ctx *context.Context, log *slog.Logger, env string) 
 		r.Get("/cakes", h.Cakes(ctx))
 	})
 
+
+	adminRouter := chi.NewRouter()
+	adminRouter.Use(NewLogger(log))
+	adminRouter.Route("/", func(r chi.Router) {
+		// TODO: handler funcs
+		r.Post("/sign-in", h.AdminSignIn(ctx, log))
+		
+		admManagerRouter := chi.NewRouter()
+		admManagerRouter.Use(h.AdminIdentityMiddleware())
+		admManagerRouter.Use(NewLogger(log))
+
+		admManagerRouter.Route("/manage-users", func(r chi.Router) {
+			r.Get("/users", h.ShowUsers(ctx, log))
+			r.Post("/delete-user/{id}", func(w http.ResponseWriter, r *http.Request) {})
+		})
+
+		admManagerRouter.Route("/manage-cakes", func(r chi.Router) {
+			r.Get("/cakes", func(w http.ResponseWriter, r *http.Request) {})
+			r.Post("/add-cakes", func(w http.ResponseWriter, r *http.Request) {})
+			r.Post("/remove-cakes", func(w http.ResponseWriter, r *http.Request) {})
+			r.Post("/update-cake/{id}", func(w http.ResponseWriter, r *http.Request) {})
+		})
+
+		admManagerRouter.Route("/database", func(r chi.Router) {
+			// backup - database dump
+			r.Post("/backup", func(w http.ResponseWriter, r *http.Request) {})
+			r.Post("/recovery", func(w http.ResponseWriter, r *http.Request) {})
+		})
+			
+		r.Mount("/", admManagerRouter)
+	})
+
 	router.Mount("/", apiRouter)
+	router.Mount("/adm", adminRouter)
 
 	return router
 }

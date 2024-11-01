@@ -30,14 +30,14 @@ func NewAuthService(stg storage.Authorization) *AuthService {
 }
 
 // unexportable method
-func (s *AuthService) generatePasswordHash(password string) string {
+func generatePasswordHash(password string) string {
 	hash := sha1.New()
 	hash.Write([]byte(password))
 	return fmt.Sprintf("%x", hash.Sum([]byte(salt)))
 }
 
 func (s* AuthService) CreateUser(user models.User) (int, error) {
-	user.PasswordHash = s.generatePasswordHash(user.PasswordHash)
+	user.PasswordHash = generatePasswordHash(user.PasswordHash)
 	log.Printf("hash: %s", user.PasswordHash)
 	// other user's fields without changes
 	return s.stg.CreateUser(user)
@@ -45,7 +45,7 @@ func (s* AuthService) CreateUser(user models.User) (int, error) {
 
 func (s* AuthService) GenerateToken(username, password string) (string, error) {
 	// get user from db
-	userID, err := s.stg.GetUser(username, s.generatePasswordHash(password))
+	userID, err := s.stg.GetUser(username, generatePasswordHash(password))
 	if err != nil {
 		return "", err
 	}

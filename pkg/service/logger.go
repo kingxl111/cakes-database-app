@@ -8,7 +8,7 @@ type LoggerService struct {
 	stg storage.Logger
 }
 
-func NewLoggerService(stg *storage.Storage) *LoggerService {
+func NewLoggerService(stg storage.Logger) *LoggerService {
 	return &LoggerService{stg: stg}
 } 
 

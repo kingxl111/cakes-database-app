@@ -10,6 +10,9 @@ type Service struct {
 	Authorization
 	OrderManager
 	CakeManager
+
+	AdminAuthorization
+	AdminService
 }
 
 type Authorization interface {
@@ -33,11 +36,22 @@ type Logger interface {
 	WriteLog(level string, msg string) error 
 }
 
+type AdminAuthorization interface {
+	GenerateAdminToken(username, password string) (string, error)
+	ParseAdminToken(accessToken string) (int, error)
+}
+
+type AdminService interface {
+	GetUsers() ([]models.User, error)
+}
+
 func NewService(storage *storage.Storage) *Service{
 	return &Service{
 		Authorization: NewAuthService(storage),
 		OrderManager: NewOrderService(storage),
 		CakeManager: NewCakeService(storage),
 		Logger: NewLoggerService(storage),
+		AdminAuthorization: NewAdminAuthService(storage),
+		AdminService: NewAdminService(storage),
 	}
 }

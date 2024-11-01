@@ -5,15 +5,15 @@ import (
 	"context"
 )
 
-type CakeManagerPostgres struct {
+type UserCakeManagerPostgres struct {
 	db *DB
 }
 
-func NewCakeManagerPostgres(db *DB) *CakeManagerPostgres {
-	return &CakeManagerPostgres{db: db}
+func NewUserCakeManagerPostgres(db *DB) *UserCakeManagerPostgres {
+	return &UserCakeManagerPostgres{db: db}
 }
 
-func (c *CakeManagerPostgres) GetCakes() ([]models.Cake, error) {
+func (c *UserCakeManagerPostgres) GetCakes() ([]models.Cake, error) {
 	cakes := make([]models.Cake, 0, 10)
 	query := "SELECT id, description, price, weight FROM cakes"
 	rows, err := c.db.pool.Query(context.Background(), query)
