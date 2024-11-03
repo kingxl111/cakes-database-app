@@ -1,10 +1,10 @@
 package main
 
 import (
-	"cakes-database-app/pkg/config"
-	server "cakes-database-app/pkg/server"
-	"cakes-database-app/pkg/service"
-	"cakes-database-app/pkg/storage"
+	"cakes-database-app/internal/config"
+	server "cakes-database-app/internal/server"
+	"cakes-database-app/internal/service"
+	"cakes-database-app/internal/storage"
 	"context"
 	"database/sql"
 	"log"
@@ -24,35 +24,35 @@ const (
 
 func main() {
 	ctx := context.Background()
-	
+
 	// config - cleanenv
 	cfg := config.MustLoad()
-	
+
 	// logger
 	logg := SetupLogger(cfg.Env)
-	
+
 	// database init
 	db, err := storage.NewDB(
 		cfg.DB.Username,
-        cfg.DB.Password,
-        cfg.DB.Address,
-        cfg.DB.DBName,
-        cfg.DB.SSLmode,
-    )
-    if err != nil {
+		cfg.DB.Password,
+		cfg.DB.Address,
+		cfg.DB.DBName,
+		cfg.DB.SSLmode,
+	)
+	if err != nil {
 		log.Fatalf("failed to connect to database: %s", err)
-    }
-    defer db.Close()
-	logg.Info("database started on", cfg.DB.Address)
+	}
+	defer db.Close()
+	logg.Info("database started on: " + cfg.DB.Address)
 
-	// err = Migrate(logg)	
+	// err = Migrate(logg)
 	// if err != nil {
 	// 	log.Fatalf("Migration up error: %s", err.Error())
 	// }
 
 	// all layers
-	storage := storage.NewStorage(db)
-	services := service.NewService(storage)
+	st := storage.NewStorage(db)
+	services := service.NewService(st)
 	router := server.NewHandler(services)
 
 	// run server
@@ -63,64 +63,66 @@ func main() {
 		logg.Info("server starting error!")
 		return
 	}
-}	
+}
 
 func Migrate(logg *slog.Logger) error {
 	dbURL := "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-    db, err := sql.Open("postgres", dbURL)
-    if err != nil {
-        logg.Error("Could not open database: ", err.Error())
-		return err
-    }
-
-    driver, err := postgres.WithInstance(db, &postgres.Config{})
-    if err != nil {
-        logg.Error("Could not create driver: %v", err)
-    }
-
-    m, err := migrate.NewWithDatabaseInstance(
-        "file:///home/vadim/cakes-database-app/pkg/storage/pgsql/migrations",
-        "postgres", driver)
+	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		logg.Error("Could not create migrate instance: %v", err)
+		logg.Error("Could not open database: " + err.Error())
+		return err
+	}
+
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		logg.Error("Could not create driver: " + err.Error())
+	}
+
+	m, err := migrate.NewWithDatabaseInstance(
+		"file:///home/vadim/cakes-database-app/pkg/storage/pgsql/migrations",
+		"postgres", driver)
+	if err != nil {
+		logg.Error("Could not create migrate instance: " + err.Error())
+	}
+	if m == nil {
+		log.Fatalf("no migrations found")
 	}
 
 	if err := m.Up(); err != nil {
-		logg.Error("Could not apply migrations: %v", err)
+		logg.Error("Could not apply migrations: " + err.Error())
 	}
 
 	logg.Info("Migrations applied successfully")
 
-	version, dirty, err := m.Version()
+	_, dirty, err := m.Version()
 	if err != nil {
-		logg.Error("New migration version error: %s", err.Error())
+		logg.Error("New migration version error: " + err.Error())
 	}
-
-	logg.Info("Applied migration: %d, Dirty %t\n", version, dirty)
+	_ = dirty
 	return nil
 }
 
 func SetupLogger(env string) *slog.Logger {
-	var log *slog.Logger
+	var lg *slog.Logger
 
 	switch env {
 	case envLocal:
-		log = slog.New(
+		lg = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
 		)
 	case envDev:
-		log = slog.New(
+		lg = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
 		)
 	case envProd:
-		log = slog.New(
+		lg = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		)
 	default: // If env config is invalid, set prod settings by default due to security
-		log = slog.New(
+		lg = slog.New(
 			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
 		)
 	}
 
-	return log
+	return lg
 }
