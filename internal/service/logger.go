@@ -1,7 +1,7 @@
 package service
 
 import (
-	"cakes-database-app/internal/storage"
+	"github.com/kingxl111/cakes-database-app/internal/storage"
 )
 
 type LoggerService struct {

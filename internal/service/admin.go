@@ -1,9 +1,10 @@
 package service
 
 import (
-	"cakes-database-app/internal/models"
-	"cakes-database-app/internal/storage"
 	"errors"
+
+	"github.com/kingxl111/cakes-database-app/internal/models"
+	"github.com/kingxl111/cakes-database-app/internal/storage"
 
 	"github.com/golang-jwt/jwt/v5"
 )

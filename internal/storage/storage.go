@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"cakes-database-app/internal/models"
+	"github.com/kingxl111/cakes-database-app/internal/models"
 )
 
 type Storage struct {

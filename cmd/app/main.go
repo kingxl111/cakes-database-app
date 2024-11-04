@@ -1,15 +1,16 @@
 package main
 
 import (
-	"cakes-database-app/internal/config"
-	server "cakes-database-app/internal/server"
-	"cakes-database-app/internal/service"
-	"cakes-database-app/internal/storage"
 	"context"
 	"database/sql"
 	"log"
 	"log/slog"
 	"os"
+
+	"github.com/kingxl111/cakes-database-app/internal/config"
+	"github.com/kingxl111/cakes-database-app/internal/server"
+	"github.com/kingxl111/cakes-database-app/internal/service"
+	"github.com/kingxl111/cakes-database-app/internal/storage"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
