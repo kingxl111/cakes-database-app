@@ -1,8 +1,8 @@
 package service
 
 import (
-	"cakes-database-app/internal/models"
-	"cakes-database-app/internal/storage"
+	"github.com/kingxl111/cakes-database-app/internal/models"
+	"github.com/kingxl111/cakes-database-app/internal/storage"
 )
 
 type Service struct {

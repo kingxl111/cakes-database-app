@@ -1,11 +1,14 @@
 package storage
 
 import (
-	"cakes-database-app/internal/models"
 	"context"
 	"fmt"
 	"log"
 	"time"
+
+	sq "github.com/Masterminds/squirrel"
+
+	"github.com/kingxl111/cakes-database-app/internal/models"
 )
 
 type UserOrderManagerPostgres struct {
@@ -30,8 +33,18 @@ func (o *UserOrderManagerPostgres) CreateOrder(userID int, delivery models.Deliv
 	for _, cake := range cakes {
 		var price int
 		id := cake.ID
-		getCostByIDQuery := `SELECT price FROM cakes WHERE id = $1`
-		err := tx.QueryRow(ctx, getCostByIDQuery, id).Scan(&price)
+
+		builderSelect := sq.Select("price").
+			From(CakesTable).
+			PlaceholderFormat(sq.Dollar).
+			Where(sq.Eq{"id": id})
+
+		query, args, err := builderSelect.ToSql()
+		if err != nil {
+			return orderID, fmt.Errorf("could not build query: %v", err.Error())
+		}
+
+		err = tx.QueryRow(ctx, query, args...).Scan(&price)
 		if err != nil {
 			return 0, err
 		}
@@ -47,14 +60,26 @@ func (o *UserOrderManagerPostgres) CreateOrder(userID int, delivery models.Deliv
 		PaymentMethod: paymentMethod,
 		Cost:          cost, // sum of order's cakes cost
 	}
-	orderQuery := `INSERT INTO orders (time, order_status, user_id,  payment_method, cost) VALUES ($1, $2, $3, $4, $5) RETURNING id`
-	err = tx.QueryRow(ctx,
-		orderQuery,
-		order.Time,
-		order.OrderStatus,
-		order.UserID,
-		order.PaymentMethod,
-		order.Cost).Scan(&orderID)
+
+	builderInsert := sq.Insert(OrderTable).
+		PlaceholderFormat(sq.Dollar).
+		Columns("time",
+			"order_status",
+			"user_id",
+			"payment_method",
+			"cost").
+		Values(order.Time,
+			order.OrderStatus,
+			order.UserID,
+			order.PaymentMethod,
+			order.Cost).
+		Suffix("RETURNING id")
+	query, args, err := builderInsert.ToSql()
+	if err != nil {
+		return orderID, fmt.Errorf("could not build query: %v", err.Error())
+	}
+
+	err = tx.QueryRow(ctx, query, args...).Scan(&orderID)
 	if err != nil {
 		return 0, fmt.Errorf("could not insert order: %v", err)
 	}

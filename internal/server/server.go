@@ -1,11 +1,12 @@
 package server
 
 import (
-	"cakes-database-app/internal/config"
 	"context"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/kingxl111/cakes-database-app/internal/config"
 )
 
 type Server struct {

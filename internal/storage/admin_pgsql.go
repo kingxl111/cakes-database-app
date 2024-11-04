@@ -1,8 +1,12 @@
 package storage
 
 import (
-	"cakes-database-app/internal/models"
 	"context"
+	"fmt"
+	"log"
+
+	sq "github.com/Masterminds/squirrel"
+	"github.com/kingxl111/cakes-database-app/internal/models"
 )
 
 type AdminAuthPostgres struct {
@@ -13,11 +17,21 @@ func NewAdminAuthPostgres(db *DB) *AdminAuthPostgres {
 	return &AdminAuthPostgres{db: db}
 }
 
-func (a *AdminAuthPostgres) GetAdmin(username, password_hash string) (int, error) {
+func (a *AdminAuthPostgres) GetAdmin(username, passwordHash string) (int, error) {
 	var id int
-	ctx := context.Background()
-	query := "SELECT id FROM admins WHERE username = $1 AND password_hash = $2"
-	err := a.db.pool.QueryRow(ctx, query, username, password_hash).Scan(&id)
+	//log.Println("password_hash: " + passwordHash)
+	builderSelect := sq.Select("id").
+		From(AdminTable).
+		PlaceholderFormat(sq.Dollar).
+		Where(sq.Eq{"username": username}).
+		Where(sq.Eq{"password_hash": passwordHash})
+
+	query, args, err := builderSelect.ToSql()
+	if err != nil {
+		return id, fmt.Errorf("error building query: %v", err.Error())
+	}
+	log.Println(args...)
+	err = a.db.pool.QueryRow(context.Background(), query, args...).Scan(&id)
 	if err != nil {
 		return id, err
 	}
@@ -34,8 +48,17 @@ func NewAdminPostgres(db *DB) *AdminPostgres {
 
 func (a *AdminPostgres) GetUsers() ([]models.User, error) {
 	users := make([]models.User, 0, 10)
-	query := "SELECT id, fullname, username, email, phone_number FROM users"
-	rows, err := a.db.pool.Query(context.Background(), query)
+
+	builderSelect := sq.Select("id", "fullname", "username", "email", "phone_number").
+		From(UserTable).
+		PlaceholderFormat(sq.Dollar)
+
+	query, args, err := builderSelect.ToSql()
+	if err != nil {
+		return users, fmt.Errorf("error building query: %v", err.Error())
+	}
+
+	rows, err := a.db.pool.Query(context.Background(), query, args...)
 	if err != nil {
 		return users, err
 	}

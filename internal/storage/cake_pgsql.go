@@ -1,8 +1,12 @@
 package storage
 
 import (
-	"cakes-database-app/internal/models"
 	"context"
+	"fmt"
+
+	sq "github.com/Masterminds/squirrel"
+
+	"github.com/kingxl111/cakes-database-app/internal/models"
 )
 
 type UserCakeManagerPostgres struct {
@@ -15,8 +19,17 @@ func NewUserCakeManagerPostgres(db *DB) *UserCakeManagerPostgres {
 
 func (c *UserCakeManagerPostgres) GetCakes() ([]models.Cake, error) {
 	cakes := make([]models.Cake, 0, 10)
-	query := "SELECT id, description, price, weight FROM cakes"
-	rows, err := c.db.pool.Query(context.Background(), query)
+
+	builderSelect := sq.Select("id", "description", "price", "weight").
+		From(CakesTable).
+		PlaceholderFormat(sq.Dollar)
+
+	query, args, err := builderSelect.ToSql()
+	if err != nil {
+		return cakes, fmt.Errorf("failed to build query: %v", err.Error())
+	}
+
+	rows, err := c.db.pool.Query(context.Background(), query, args...)
 	if err != nil {
 		return nil, err
 	}

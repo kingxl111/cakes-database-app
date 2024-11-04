@@ -15,7 +15,7 @@ const (
 	OrdersCakesTable   = "order_cakes"
 	CakesTable         = "cakes"
 	DeliveryPointTable = "delivery_point"
-	AdminTable         = "administrators"
+	AdminTable         = "admins"
 )
 
 type DB struct {

@@ -1,0 +1,203 @@
+openapi: 3.0.0
+info:
+  title: The Sweets of Life API
+  description: API for managing cakes and orders
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /auth/sign-up:
+    post:
+      summary: Register a new user
+      responses:
+        '200':
+          description: Successful registration
+        '400':
+          description: Validation error
+  /auth/sign-in:
+    post:
+      summary: User login
+      responses:
+        '200':
+          description: Successful login
+        '401':
+          description: Invalid credentials
+
+  /api/make-order:
+    post:
+      summary: Create an order
+      responses:
+        '201':
+          description: Order successfully created
+        '400':
+          description: Error creating order
+
+  /api/view-orders:
+    get:
+      summary: View orders
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    cakeId:
+                      type: integer
+                    userId:
+                      type: integer
+                    status:
+                      type: string
+
+  /api/change-order:
+    post:
+      summary: Change an order
+      responses:
+        '200':
+          description: Order successfully changed
+        '400':
+          description: Error changing order
+
+  /api/delete-order:
+    post:
+      summary: Delete an order
+      responses:
+        '204':
+          description: Order successfully deleted
+        '404':
+          description: Order not found
+
+  /api/cakes:
+    get:
+      summary: Get the list of cakes
+      responses:
+        '200':
+          description: List of cakes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    price:
+                      type: number
+
+  /adm/sign-in:
+    post:
+      summary: Admin login
+      responses:
+        '200':
+          description: Successful admin login
+        '401':
+          description: Invalid admin credentials
+
+  /adm/manage-users/users:
+    get:
+      summary: Get the list of users
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+
+  /adm/manage-users/delete-user/{id}:
+    post:
+      summary: Delete a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: User successfully deleted
+        '404':
+          description: User not found
+
+  /adm/manage-cakes/cakes:
+    get:
+      summary: Get the list of cakes for administration
+      responses:
+        '200':
+          description: List of cakes
+
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+
+  /adm/manage-cakes/add-cakes:
+    post:
+      summary: Add a new cake
+      responses:
+        '201':
+          description: Cake successfully added
+        '400':
+          description: Error adding cake
+
+  /adm/manage-cakes/remove-cakes:
+    post:
+      summary: Remove a cake
+      responses:
+        '204':
+          description: Cake successfully removed
+        '404':
+          description: Cake not found
+
+  /adm/manage-cakes/update-cake/{id}:
+    post:
+      summary: Update cake information
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Cake ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Cake successfully updated
+        '404':
+          description: Cake not found
+
+  /adm/database/backup:
+    post:
+      summary: Backup the database
+      responses:
+        '200':
+          description: Database successfully saved
+
+  /adm/database/recovery:
+    post:
+      summary: Recover the database
+      responses:
+        '200':
+          description: Database successfully recovered

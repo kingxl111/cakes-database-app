@@ -1,8 +1,9 @@
 package server
 
 import (
-	"cakes-database-app/internal/service"
 	"context"
+
+	"github.com/kingxl111/cakes-database-app/internal/service"
 
 	// "fmt"
 	"log/slog"
@@ -10,8 +11,6 @@ import (
 
 	"github.com/go-chi/chi"
 )
-
-// var _ http.Handler = (&Handler)(nil)
 
 type Handler struct {
 	services *service.Service
