@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/kingxl111/cakes-database-app/internal/logging"
 	"log"
+
+	"github.com/kingxl111/cakes-database-app/internal/logging"
 
 	"time"
 

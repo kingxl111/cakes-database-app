@@ -2,10 +2,11 @@ package server
 
 import (
 	"context"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/go-chi/chi/v5/middleware"
 )

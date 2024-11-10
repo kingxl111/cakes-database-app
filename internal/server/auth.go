@@ -3,9 +3,10 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/kingxl111/cakes-database-app/internal/models"
 
@@ -23,7 +24,7 @@ func (h *Handler) SignUp(c *context.Context, log *logrus.Logger) http.HandlerFun
 
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
-			log.Info("error operation: %s: %s", op, err.Error())
+			log.Info("error operation:", op, err.Error())
 			//h.services.Logger.WriteLog("ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
@@ -31,7 +32,7 @@ func (h *Handler) SignUp(c *context.Context, log *logrus.Logger) http.HandlerFun
 
 		id, err := h.services.CreateUser(req)
 		if err != nil {
-			log.Info("error operation: %s: %s", op, err.Error())
+			log.Info("error operation:", op, err.Error())
 			//h.services.Logger.WriteLog("ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
@@ -60,7 +61,7 @@ func (h *Handler) SignIn(c *context.Context, log *logrus.Logger) http.HandlerFun
 
 		err := render.DecodeJSON(r.Body, &input)
 		if err != nil {
-			log.Info("error operation: %s: %s", op, err.Error())
+			log.Info("error operation:", op, err.Error())
 			// h.services.Logger.WriteLog("ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
@@ -68,13 +69,13 @@ func (h *Handler) SignIn(c *context.Context, log *logrus.Logger) http.HandlerFun
 
 		token, err := h.services.GenerateToken(input.Username, input.Password)
 		if err != nil {
-			log.Info("error operation: %s: %s", op, err.Error())
+			log.Info("error operation:", op, err.Error())
 			// h.services.Logger.WriteLog("ERROR", op + err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		log.Info("generated token for user %s: %s", input.Username, token)
+		log.Info("generated token for user", input.Username, token)
 		// h.services.Logger.WriteLog("INFO", op + ": user:" + input.Username)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

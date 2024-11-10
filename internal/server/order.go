@@ -3,9 +3,10 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/kingxl111/cakes-database-app/internal/models"
 
@@ -32,7 +33,7 @@ func (h *Handler) MakeOrder(ctx *context.Context, log *logrus.Logger) http.Handl
 			req.Cakes,
 			req.PaymentMethod)
 		if err != nil {
-			log.Error("Failed to create order: %v", err)
+			log.Error("Failed to create order:", err)
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}

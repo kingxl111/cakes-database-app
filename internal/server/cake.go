@@ -3,9 +3,10 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"github.com/sirupsen/logrus"
 	"net/http"
 	"strconv"
+
+	"github.com/sirupsen/logrus"
 )
 
 func (h *Handler) Cakes(ctx *context.Context, log *logrus.Logger) http.HandlerFunc {
