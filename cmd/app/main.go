@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
+	"github.com/kingxl111/cakes-database-app/internal/logging"
 	"log"
-	"log/slog"
-	"os"
+
 	"time"
 
 	"github.com/kingxl111/cakes-database-app/internal/config"
@@ -15,11 +15,11 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
-const (
-	envLocal = "local"
-	envDev   = "dev"
-	envProd  = "prod"
-)
+//const (
+//	envLocal = "local"
+//	envDev   = "dev"
+//	envProd  = "prod"
+//)
 
 func main() {
 	ctx := context.Background()
@@ -28,7 +28,11 @@ func main() {
 	cfg := config.MustLoad()
 
 	// logger
-	logg := SetupLogger(cfg.Env)
+	//logg := SetupLogger(cfg.Env)
+	logg, err := logging.NewLogger("logs.txt")
+	if err != nil {
+		log.Fatalf("can't initialize logger: %v", err.Error())
+	}
 
 	// database init
 	// wait 7 s before connect to db
@@ -53,34 +57,34 @@ func main() {
 	// run server
 	srv := &server.Server{}
 	log.Printf("server started on %s", cfg.HTTPServer.Address)
-	err = srv.Run(router.NewRouter(&ctx, logg, cfg.Env), cfg)
+	err = srv.Run(router.NewRouter(&ctx, logg.Lg, cfg.Env), cfg)
 	if err != nil {
-		logg.Info("server starting error!")
+		logg.Lg.Info("server starting error!")
 		return
 	}
 }
 
-func SetupLogger(env string) *slog.Logger {
-	var lg *slog.Logger
-
-	switch env {
-	case envLocal:
-		lg = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
-	case envDev:
-		lg = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
-	case envProd:
-		lg = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		)
-	default: // If env config is invalid, set prod settings by default due to security
-		lg = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		)
-	}
-
-	return lg
-}
+//func SetupLogger(env string) *slog.Logger {
+//	var lg *slog.Logger
+//
+//	switch env {
+//	case envLocal:
+//		lg = slog.New(
+//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+//		)
+//	case envDev:
+//		lg = slog.New(
+//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
+//		)
+//	case envProd:
+//		lg = slog.New(
+//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+//		)
+//	default: // If env config is invalid, set prod settings by default due to security
+//		lg = slog.New(
+//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
+//		)
+//	}
+//
+//	return lg
+//}

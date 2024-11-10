@@ -2,11 +2,10 @@ package server
 
 import (
 	"context"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"strings"
 	"time"
-
-	"log/slog"
 
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -87,36 +86,36 @@ func (h *Handler) AdminIdentityMiddleware() func(http.Handler) http.Handler {
 	}
 }
 
-func NewLogger(log *slog.Logger) func(next http.Handler) http.Handler {
+func NewLogger(log *logrus.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		log := log.With(
-			slog.String("component", "middleware/logger"),
-		)
 
 		log.Info("logger middleware enabled")
 
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			entry := log.With(
-				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
-				slog.String("remote_addr", r.RemoteAddr),
-				slog.String("user_agent", r.UserAgent()),
-				slog.String("request_id", middleware.GetReqID(r.Context())),
-			)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Создаем новый лог-запись с дополнительными полями
+			entry := log.WithFields(logrus.Fields{
+				"method":      r.Method,
+				"path":        r.URL.Path,
+				"remote_addr": r.RemoteAddr,
+				"user_agent":  r.UserAgent(),
+				"request_id":  middleware.GetReqID(r.Context()),
+			})
+
+			// Оборачиваем ResponseWriter для захвата статуса и байтов
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
+			// Запоминаем время начала запроса
 			t1 := time.Now()
 			defer func() {
-				entry.Info("request completed",
-					slog.Int("status", ww.Status()),
-					slog.Int("bytes", ww.BytesWritten()),
-					slog.String("duration", time.Since(t1).String()),
-				)
+				// Логируем завершение запроса
+				entry.WithFields(logrus.Fields{
+					"status":   ww.Status(),
+					"bytes":    ww.BytesWritten(),
+					"duration": time.Since(t1).String(),
+				}).Info("request completed")
 			}()
 
 			next.ServeHTTP(ww, r)
-		}
-
-		return http.HandlerFunc(fn)
+		})
 	}
 }

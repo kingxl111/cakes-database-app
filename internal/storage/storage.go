@@ -5,8 +5,6 @@ import (
 )
 
 type Storage struct {
-	Logger
-
 	Authorization
 	UserOrderManager
 	UserCakeManager
@@ -31,10 +29,6 @@ type UserCakeManager interface {
 	GetCakes() ([]models.Cake, error)
 }
 
-type Logger interface {
-	WriteLog(level string, msg string) error
-}
-
 type AdminAuthorization interface {
 	GetAdmin(username, password_hash string) (int, error)
 }
@@ -50,7 +44,6 @@ func NewStorage(db *DB) *Storage {
 		Authorization:      NewAuthPostgres(db),
 		UserOrderManager:   NewUserOrderManagerPostgres(db),
 		UserCakeManager:    NewUserCakeManagerPostgres(db),
-		Logger:             NewLoggerPostgres(db),
 		AdminAuthorization: NewAdminAuthPostgres(db),
 		Admin:              NewAdminPostgres(db),
 	}

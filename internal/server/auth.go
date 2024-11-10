@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
+	"github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 
@@ -12,14 +12,13 @@ import (
 	"github.com/go-chi/render"
 )
 
-// Handler's high-level method
-func (h *Handler) SignUp(c *context.Context, log *slog.Logger) http.HandlerFunc {
+func (h *Handler) SignUp(c *context.Context, log *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.sign-up"
-		log := log.With(
-			slog.String("op", op),
-			slog.String("time", time.Now().Format("2024-10-29 21:03:54")),
-		)
+		log := log.WithFields(logrus.Fields{
+			"op":   op,
+			"time": time.Now().Format("2024-10-29 21:03:54"),
+		})
 		var req models.User
 
 		err := render.DecodeJSON(r.Body, &req)
@@ -50,13 +49,13 @@ func (h *Handler) SignUp(c *context.Context, log *slog.Logger) http.HandlerFunc 
 	}
 }
 
-func (h *Handler) SignIn(c *context.Context, log *slog.Logger) http.HandlerFunc {
+func (h *Handler) SignIn(c *context.Context, log *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.sign-in"
-		log := log.With(
-			slog.String("op", op),
-			slog.String("time", time.Now().Format("2024-10-29 21:03:54")),
-		)
+		log := log.WithFields(logrus.Fields{
+			"op":   op,
+			"time": time.Now().Format("2024-10-29 21:03:54"),
+		})
 		var input signInInput
 
 		err := render.DecodeJSON(r.Body, &input)
