@@ -3,41 +3,39 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
 	"net/http"
 
-	// "strconv"
+	"github.com/sirupsen/logrus"
+
 	"time"
 
 	"github.com/go-chi/render"
 )
 
-func (h *Handler) AdminSignIn(ctx *context.Context, log *slog.Logger) http.HandlerFunc {
+func (h *Handler) AdminSignIn(ctx *context.Context, log *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.admin.sign-in"
-		log := log.With(
-			slog.String("op", op),
-			slog.String("time", time.Now().Format("2024-10-29 21:03:54")),
-		)
+		log := log.WithFields(logrus.Fields{
+			"op":   op,
+			"time": time.Now().Format(time.RFC3339),
+		})
 		var input signInInput
 
 		err := render.DecodeJSON(r.Body, &input)
 		if err != nil {
-			// h.services.Logger.WriteLog("ERROR", op + err.Error())
+			log.Error(op, "can't decode json", err)
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
 		token, err := h.services.GenerateAdminToken(input.Username, input.Password)
 		if err != nil {
-			log.Info("error operation: %s: %s", op, err.Error())
-			// h.services.Logger.WriteLog("ERROR", op + err.Error())
+			log.Error(op, "can't generate admin token", err.Error())
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
-		log.Info("generated token for user %s: %s", input.Username, token)
-		// h.services.Logger.WriteLog("INFO", op + ": admin:" + input.Username)
+		log.Info("generated token for admin:", input.Username, token)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		jsonResponse := map[string]interface{}{
@@ -49,20 +47,18 @@ func (h *Handler) AdminSignIn(ctx *context.Context, log *slog.Logger) http.Handl
 	}
 }
 
-func (h *Handler) ShowUsers(ctx *context.Context, log *slog.Logger) http.HandlerFunc {
+func (h *Handler) ShowUsers(ctx *context.Context, log *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.admin.show-users: "
 
 		users, err := h.services.AdminService.GetUsers()
 		if err != nil {
-			log.Info("error operation: %s: %s", op, err.Error())
-			// h.services.Logger.WriteLog("ERROR", op + err.Error())
+			log.Error("error operation:", op, err.Error())
 			newErrorResponse(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		adminID := r.Context().Value(userCtx).(int)
-		log.Info(op, "adminID: %v", adminID)
-		// h.services.Logger.WriteLog("INFO", op + "adminID: " + strconv.Itoa(adminID))
+		log.Info(op, "adminID:", adminID)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

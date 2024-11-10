@@ -20,3 +20,13 @@ $ migrate -path "/path/to/migrations" -database "postgres://user:password@localh
 $ migrate -path "/path/to/migrations" -database "postgres://user:password@localhost:5432/dbname?sslmode=disable" force <migration_version>
 ```
 
+# docker-compose
+up:
+```bash
+sudo docker-compose --env-file local.env up --build
+```
+rm: 
+```bash
+sudo docker-compose --env-file local.env down --rmi all --volumes
+```
+env variables are loaded from local.env

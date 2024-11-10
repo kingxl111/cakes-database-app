@@ -22,8 +22,8 @@ type DB struct {
 	pool *pgxpool.Pool
 }
 
-func NewDB(username, password, address, dbname, sslmode string) (*DB, error) {
-	connString := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s", username, password, address, dbname, sslmode)
+func NewDB(username, password, host, port, dbname, sslmode string) (*DB, error) {
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", username, password, host, port, dbname, sslmode)
 	pool, err := pgxpool.New(context.Background(), connString)
 	if err != nil {
 		return nil, err

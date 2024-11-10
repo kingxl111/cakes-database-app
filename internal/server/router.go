@@ -3,10 +3,10 @@ package server
 import (
 	"context"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/kingxl111/cakes-database-app/internal/service"
 
-	// "fmt"
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi"
@@ -20,16 +20,15 @@ func NewHandler(services *service.Service) *Handler {
 	return &Handler{services: services}
 }
 
-func (h *Handler) NewRouter(ctx *context.Context, log *slog.Logger, env string) http.Handler {
+func (h *Handler) NewRouter(ctx *context.Context, log *logrus.Logger, env string) http.Handler {
 	log.Info(
 		"STARTING TheSweetsOfLifeApp",
-		slog.String("env", env),
-		slog.String("version", "1.0"),
+		log.WithFields(logrus.Fields{
+			"env":     env,
+			"version": "1.0",
+		}),
 	)
 	log.Debug("debug messages are enabled")
-	// if err := h.services.Logger.WriteLog("INFO", "new router started!"); err != nil {
-	// 	return fmt.Errorf("services.Logger.WriteLo: %w", err)
-	// }
 
 	router := chi.NewRouter()
 	router.Use(NewLogger(log))
@@ -68,7 +67,7 @@ func (h *Handler) NewRouter(ctx *context.Context, log *slog.Logger, env string) 
 		})
 
 		admManagerRouter.Route("/manage-cakes", func(r chi.Router) {
-			r.Get("/cakes", func(w http.ResponseWriter, r *http.Request) {})
+			r.Get("/cakes", h.Cakes(ctx, log))
 			r.Post("/add-cakes", func(w http.ResponseWriter, r *http.Request) {})
 			r.Post("/remove-cakes", func(w http.ResponseWriter, r *http.Request) {})
 			r.Post("/update-cake/{id}", func(w http.ResponseWriter, r *http.Request) {})
