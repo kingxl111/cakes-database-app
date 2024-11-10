@@ -17,11 +17,11 @@ func (s *Server) Run(handler http.Handler, cfg *config.Config) error {
 
 	timeout, err := time.ParseDuration(cfg.HTTPServer.Timeout)
 	if err != nil {
-		log.Fatalf("invalid timeout configuration: %s", err)
+		log.Fatalf("invalid timeout configuration: %s", err.Error())
 	}
 	idleTimeout, err := time.ParseDuration(cfg.HTTPServer.IdleTimeout)
 	if err != nil {
-		log.Fatalf("invalid idle timeout configuration: %s", err)
+		log.Fatalf("invalid idle timeout configuration: %s", err.Error())
 	}
 
 	s.HTTPServer = &http.Server{

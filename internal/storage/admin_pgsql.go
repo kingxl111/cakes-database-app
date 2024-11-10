@@ -76,3 +76,26 @@ func (a *AdminPostgres) GetUsers() ([]models.User, error) {
 
 	return users, nil
 }
+
+func (a *AdminPostgres) Backup() error {
+
+	return nil
+}
+
+//func (a *AdminPostgres) DeleteUser(userID int) error {
+//	builderDelete := sq.Delete(UserTable).
+//		PlaceholderFormat(sq.Dollar).
+//		Where(sq.Eq{"id": userID})
+//
+//	query, args, err := builderDelete.ToSql()
+//	if err != nil {
+//		return fmt.Errorf("error building query: %v", err.Error())
+//	}
+//
+//	res, err := a.db.pool.Exec(context.Background(), query, args...)
+//	if err != nil {
+//		return fmt.Errorf("error deleting user: %v", err.Error())
+//	}
+//
+//	return nil
+//}

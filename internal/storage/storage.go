@@ -41,6 +41,8 @@ type AdminAuthorization interface {
 
 type Admin interface {
 	GetUsers() ([]models.User, error)
+	//DeleteUser(userID int) error
+	Backup() error
 }
 
 func NewStorage(db *DB) *Storage {

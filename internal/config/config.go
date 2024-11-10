@@ -25,10 +25,20 @@ type HTTPServer struct {
 type DB struct {
 	Username string `yaml:"username"`
 	Password string `yaml:"password"`
-	Address  string `yaml:"address" env-default:"localhost:5432"`
-	DBName   string `yaml:"dbname"`
+	Host     string `yaml:"host"`
+	Port     string `yaml:"port"`
+	DBName   string `yaml:"name"`
 	SSLmode  string `yaml:"sslmode"`
 }
+
+const (
+	user     = "DB_USER"
+	password = "DB_PASSWORD"
+	name     = "DB_NAME"
+	host     = "DB_HOST"
+	port     = "DB_PORT"
+	sslmode  = "disable"
+)
 
 func MustLoad() *Config {
 
@@ -46,6 +56,13 @@ func MustLoad() *Config {
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
 		log.Fatalf("can't read config: %s", err)
 	}
+
+	cfg.DB.DBName = os.Getenv(name)
+	cfg.DB.Username = os.Getenv(user)
+	cfg.DB.Password = os.Getenv(password)
+	cfg.DB.Host = os.Getenv(host)
+	cfg.DB.Port = os.Getenv(port)
+	cfg.DB.SSLmode = sslmode
 
 	return &cfg
 }
