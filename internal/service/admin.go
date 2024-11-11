@@ -69,3 +69,7 @@ func NewAdminService(stg storage.Admin) *AdminServ {
 func (a *AdminServ) GetUsers() ([]models.User, error) {
 	return a.stg.GetUsers()
 }
+
+func (a *AdminServ) Backup() error {
+	return a.stg.Backup()
+}

@@ -20,3 +20,7 @@ func (o *OrderService) CreateOrder(userID int, delivery models.Delivery, cakes [
 func (o *OrderService) GetOrders(userID int) (models.GetOrdersResponse, error) {
 	return o.stg.GetOrders(userID)
 }
+
+func (o *OrderService) DeleteOrder(userID, orderID int) error {
+	return o.stg.DeleteOrder(userID, orderID)
+}

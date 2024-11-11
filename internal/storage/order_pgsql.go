@@ -221,3 +221,92 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 
 	return res, nil
 }
+
+func (o *UserOrderManagerPostgres) DeleteOrder(userID, orderID int) error {
+	const op = "pgsql.DeleteOrder"
+
+	ctx := context.Background()
+	tx, err := o.db.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("op: %s: could not begin transaction: %s", op, err.Error())
+	}
+
+	// validation:
+	query, args, err := sq.Select("user_id").
+		From(OrderTable).
+		PlaceholderFormat(sq.Dollar).
+		Where(sq.Eq{"id": orderID}).
+		Where(sq.Eq{"user_id": userID}).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("can't exec: %s: %s", op, err.Error())
+	}
+
+	res, err := tx.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("can't exec: %s: %s", op, err.Error())
+	}
+
+	rowsAffected := res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("can't find user's order: %s: %s", op, "no rows affected")
+	}
+
+	query, args, err = sq.Delete(OrdersCakesTable).
+		PlaceholderFormat(sq.Dollar).
+		Where(sq.Eq{"order_id": orderID}).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+
+	res, err = o.db.pool.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+
+	rowsAffected = res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("op: %s: %s", op, "could not delete order")
+	}
+
+	query, args, err = sq.Delete(DeliveryTable).
+		PlaceholderFormat(sq.Dollar).
+		Where(sq.Eq{"id": orderID}).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+
+	res, err = o.db.pool.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+	rowsAffected = res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("op: %s: %s", op, "could not delete order")
+	}
+
+	query, args, err = sq.Delete(OrderTable).
+		PlaceholderFormat(sq.Dollar).
+		Where(sq.Eq{"id": orderID}).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+	res, err = o.db.pool.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+	rowsAffected = res.RowsAffected()
+	if rowsAffected == 0 {
+		return fmt.Errorf("op: %s: %s", op, "could not delete order")
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("op: %s: could not commit transaction: %s", op, err.Error())
+	}
+
+	return nil
+}

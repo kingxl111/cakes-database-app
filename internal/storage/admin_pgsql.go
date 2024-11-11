@@ -2,8 +2,11 @@ package storage
 
 import (
 	"context"
+	"encoding/csv"
 	"fmt"
 	"log"
+	"os"
+	"time"
 
 	sq "github.com/Masterminds/squirrel"
 	"github.com/kingxl111/cakes-database-app/internal/models"
@@ -77,25 +80,93 @@ func (a *AdminPostgres) GetUsers() ([]models.User, error) {
 	return users, nil
 }
 
-func (a *AdminPostgres) Backup() error {
+func (db *DB) backupTable(tableName string) error {
+	query, args, err := sq.Select("*").From(tableName).ToSql()
+	if err != nil {
+		return fmt.Errorf("error building query: %w", err)
+	}
 
+	rows, err := db.pool.Query(context.Background(), query, args...)
+	if err != nil {
+		return fmt.Errorf("error executing query: %w", err)
+	}
+	defer rows.Close()
+
+	fieldDescriptions := rows.FieldDescriptions()
+	columns := make([]string, len(fieldDescriptions))
+	for i, fd := range fieldDescriptions {
+		columns[i] = string(fd.Name) // Convert pgconn.FieldDescription.Name to string
+	}
+
+	file, err := os.Create(fmt.Sprintf("%s_backup.csv", tableName))
+	if err != nil {
+		return fmt.Errorf("error creating file: %w", err)
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("error closing file: %v", err) // Handle error
+		}
+	}()
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	if err := writer.Write(columns); err != nil {
+		return fmt.Errorf("error writing column names: %w", err)
+	}
+
+	// using interface{} for universal data retrieve
+	values := make([]interface{}, len(columns))
+	for i := range values {
+		values[i] = new(interface{})
+	}
+
+	for rows.Next() {
+		if err := rows.Scan(values...); err != nil {
+			return fmt.Errorf("error retrieving data: %w", err)
+		}
+
+		record := make([]string, len(columns))
+		for i, value := range values {
+			switch v := (*value.(*interface{})).(type) {
+			case nil:
+				record[i] = ""
+			case []byte:
+				record[i] = string(v)
+			case time.Time:
+				record[i] = v.Format(time.RFC3339)
+			default:
+				record[i] = fmt.Sprintf("%v", v)
+			}
+		}
+
+		if err := writer.Write(record); err != nil {
+			return fmt.Errorf("error writing row to file: %w", err)
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error iterating rows: %w", err)
+	}
 	return nil
 }
 
-//func (a *AdminPostgres) DeleteUser(userID int) error {
-//	builderDelete := sq.Delete(UserTable).
-//		PlaceholderFormat(sq.Dollar).
-//		Where(sq.Eq{"id": userID})
-//
-//	query, args, err := builderDelete.ToSql()
-//	if err != nil {
-//		return fmt.Errorf("error building query: %v", err.Error())
-//	}
-//
-//	res, err := a.db.pool.Exec(context.Background(), query, args...)
-//	if err != nil {
-//		return fmt.Errorf("error deleting user: %v", err.Error())
-//	}
-//
-//	return nil
-//}
+func (a *AdminPostgres) Backup() error {
+	tables := []string{
+		UserTable,
+		DeliveryTable,
+		OrderTable,
+		OrdersCakesTable,
+		CakesTable,
+		DeliveryPointTable,
+		AdminTable,
+	}
+
+	for _, table := range tables {
+		if err := a.db.backupTable(table); err != nil {
+			return fmt.Errorf("error backing up table %s: %v", table, err)
+		}
+	}
+
+	return nil
+}
