@@ -46,7 +46,7 @@ func (h *Handler) NewRouter(ctx *context.Context, log *logrus.Logger, env string
 		r.Post("/make-order", h.MakeOrder(ctx, log))
 		r.Get("/view-orders", h.ViewOrders(ctx, log))
 		r.Post("/change-order", func(w http.ResponseWriter, r *http.Request) {})
-		r.Post("/delete-order", func(w http.ResponseWriter, r *http.Request) {})
+		r.Post("/delete-order", h.CancelOrder(ctx, log))
 
 		r.Get("/cakes", h.Cakes(ctx, log))
 	})
@@ -74,8 +74,7 @@ func (h *Handler) NewRouter(ctx *context.Context, log *logrus.Logger, env string
 		})
 
 		admManagerRouter.Route("/database", func(r chi.Router) {
-			// backup - database dump
-			r.Post("/backup", func(w http.ResponseWriter, r *http.Request) {})
+			r.Post("/backup", h.Backup(log))
 			r.Post("/recovery", func(w http.ResponseWriter, r *http.Request) {})
 		})
 

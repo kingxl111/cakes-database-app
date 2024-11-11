@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"strconv"
 
 	"github.com/sirupsen/logrus"
 
@@ -26,6 +25,11 @@ func (h *Handler) MakeOrder(ctx *context.Context, log *logrus.Logger) http.Handl
 			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
+		defer func() {
+			if err := r.Body.Close(); err != nil {
+				log.Error(err.Error())
+			}
+		}()
 
 		orderID, err := h.services.OrderManager.CreateOrder(
 			userID.(int),
@@ -38,7 +42,7 @@ func (h *Handler) MakeOrder(ctx *context.Context, log *logrus.Logger) http.Handl
 			return
 		}
 
-		log.Info(op + "user: " + strconv.Itoa(userID.(int)))
+		log.Info(op, "user: ", userID)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		jsonResponse := models.MakeOrderResponse{
@@ -75,6 +79,36 @@ func (h *Handler) ViewOrders(ctx *context.Context, log *logrus.Logger) http.Hand
 		if _, err := w.Write(jsonData); err != nil {
 			log.Error(err.Error())
 		}
-		log.Info(op + "user: " + strconv.Itoa(userID.(int)))
+		log.Info(op, "user: ", userID)
+	}
+}
+
+func (h *Handler) CancelOrder(ctx *context.Context, log *logrus.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "server.cancel-order: "
+		var req models.CancelOrderRequest
+
+		userID := r.Context().Value(userCtx)
+		err := render.DecodeJSON(r.Body, &req)
+		if err != nil {
+			log.Error(op, "failed to decode request", err)
+		}
+		defer func() {
+			if err := r.Body.Close(); err != nil {
+				log.Error(err.Error())
+			}
+		}()
+
+		log.Info(op, "user_id: ", userID, ", order_id: ", req.OrderID)
+
+		err = h.services.DeleteOrder(userID.(int), req.OrderID)
+		if err != nil {
+			log.Error(op, "failed to delete order", err)
+			newErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 	}
 }

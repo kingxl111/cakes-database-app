@@ -14,7 +14,7 @@ const (
 	OrderTable         = "orders"
 	OrdersCakesTable   = "order_cakes"
 	CakesTable         = "cakes"
-	DeliveryPointTable = "delivery_point"
+	DeliveryPointTable = "delivery_points"
 	AdminTable         = "admins"
 )
 

@@ -24,7 +24,7 @@ type OrderManager interface {
 	CreateOrder(userID int, delivery models.Delivery, cakes []models.Cake, paymentMethod string) (int, error)
 	GetOrders(userID int) (models.GetOrdersResponse, error)
 	// UpdateOrder(userID int, orderID int, paymentMethod models.Order) error
-	// DeleteOrder(userID, orderID int) error
+	DeleteOrder(userID, orderID int) error
 }
 
 type CakeManager interface {
@@ -38,6 +38,7 @@ type AdminAuthorization interface {
 
 type AdminService interface {
 	GetUsers() ([]models.User, error)
+	Backup() error
 }
 
 func NewService(storage *storage.Storage) *Service {

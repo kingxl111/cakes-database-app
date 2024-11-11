@@ -107,3 +107,8 @@ type ViewOrdersResponse struct {
 		DelivPoint        string    `json:"delivery_point"`
 	} `json:"orders"`
 }
+
+// CancelOrderRequest model
+type CancelOrderRequest struct {
+	OrderID int `json:"order_id"`
+}

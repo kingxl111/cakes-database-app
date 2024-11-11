@@ -67,3 +67,23 @@ func (h *Handler) ShowUsers(ctx *context.Context, log *logrus.Logger) http.Handl
 		}
 	}
 }
+
+func (h *Handler) Backup(log *logrus.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "handlers.admin.backup: "
+
+		err := h.services.Backup()
+		if err != nil {
+			newErrorResponse(w, http.StatusInternalServerError, err.Error())
+			log.Error(op, err.Error())
+		}
+		defer func() {
+			if err := r.Body.Close(); err != nil {
+				log.Error(op, err.Error())
+			}
+		}()
+
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+	}
+}
