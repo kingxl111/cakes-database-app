@@ -73,3 +73,7 @@ func (a *AdminServ) GetUsers() ([]models.User, error) {
 func (a *AdminServ) Backup() error {
 	return a.stg.Backup()
 }
+
+func (a *AdminServ) Restore() error {
+	return a.stg.Restore()
+}

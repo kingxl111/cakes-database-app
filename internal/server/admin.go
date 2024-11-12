@@ -83,6 +83,27 @@ func (h *Handler) Backup(log *logrus.Logger) http.HandlerFunc {
 			}
 		}()
 
+		log.Info(op, "statusOK, time:", time.Now().Format(time.RFC3339))
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+	}
+}
+
+func (h *Handler) Restore(log *logrus.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "handlers.admin.restore: "
+
+		err := h.services.Restore()
+		if err != nil {
+			newErrorResponse(w, http.StatusInternalServerError, err.Error())
+			log.Error(op, err.Error())
+		}
+		defer func() {
+			if err := r.Body.Close(); err != nil {
+				log.Error(op, err.Error())
+			}
+		}()
+		log.Info(op, "statusOK, time:", time.Now().Format(time.RFC3339))
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 	}

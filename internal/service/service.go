@@ -39,6 +39,7 @@ type AdminAuthorization interface {
 type AdminService interface {
 	GetUsers() ([]models.User, error)
 	Backup() error
+	Restore() error
 }
 
 func NewService(storage *storage.Storage) *Service {
