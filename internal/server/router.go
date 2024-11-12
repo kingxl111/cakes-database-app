@@ -75,7 +75,7 @@ func (h *Handler) NewRouter(ctx *context.Context, log *logrus.Logger, env string
 
 		admManagerRouter.Route("/database", func(r chi.Router) {
 			r.Post("/backup", h.Backup(log))
-			r.Post("/recovery", func(w http.ResponseWriter, r *http.Request) {})
+			r.Post("/recovery", h.Restore(log))
 		})
 
 		r.Mount("/", admManagerRouter)

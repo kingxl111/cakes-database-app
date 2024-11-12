@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -152,6 +153,11 @@ func (db *DB) backupTable(tableName string) error {
 }
 
 func (a *AdminPostgres) Backup() error {
+	ctx := context.Background()
+	tx, err := a.db.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
 	tables := []string{
 		UserTable,
 		DeliveryTable,
@@ -166,6 +172,93 @@ func (a *AdminPostgres) Backup() error {
 		if err := a.db.backupTable(table); err != nil {
 			return fmt.Errorf("error backing up table %s: %v", table, err)
 		}
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (db *DB) restoreTable(tableName string) error {
+	file, err := os.Open(fmt.Sprintf("%s_backup.csv", tableName))
+	if err != nil {
+		return fmt.Errorf("error opening backup file: %w", err)
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("error closing file: %v", err)
+		}
+	}()
+
+	reader := csv.NewReader(file)
+	records, err := reader.ReadAll()
+	if err != nil {
+		return fmt.Errorf("error reading CSV: %w", err)
+	}
+
+	if len(records) == 0 {
+		return fmt.Errorf("no records found in backup for table %s", tableName)
+	}
+
+	columns := records[0]
+
+	// Генерация placeholders в формате $1, $2, ..., $N
+	placeholders := make([]string, len(columns))
+	for i := range placeholders {
+		placeholders[i] = fmt.Sprintf("$%d", i+1)
+	}
+
+	// Формирование запроса с корректными placeholders
+	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+		tableName,
+		strings.Join(columns, ", "),
+		strings.Join(placeholders, ", "))
+
+	for _, record := range records[1:] { // Пропускаем первую строку с заголовками
+		if len(record) != len(columns) {
+			return fmt.Errorf("record length does not match column length for table %s", tableName)
+		}
+
+		// Преобразование данных для Exec
+		args := make([]interface{}, len(record))
+		for i := range record {
+			args[i] = record[i]
+		}
+
+		_, err := db.pool.Exec(context.Background(), query, args...)
+		if err != nil {
+			return fmt.Errorf("error inserting record into table %s: %w", tableName, err)
+		}
+	}
+
+	return nil
+}
+
+func (a *AdminPostgres) Restore() error {
+	ctx := context.Background()
+	tx, err := a.db.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	tables := []string{
+		UserTable,
+		AdminTable,
+		CakesTable,
+		DeliveryPointTable,
+		OrderTable,
+		DeliveryTable,
+		OrdersCakesTable,
+	}
+
+	for _, table := range tables {
+		if err := a.db.restoreTable(table); err != nil {
+			return fmt.Errorf("error restoring table %s: %v", table, err)
+		}
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return nil

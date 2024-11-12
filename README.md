@@ -30,3 +30,10 @@ rm:
 sudo docker-compose --env-file local.env down --rmi all --volumes
 ```
 env variables are loaded from local.env
+
+# psql: drop all tables to demonstrate recovery
+```SQL
+BEGIN;
+TRUNCATE TABLE users, orders, order_cakes, logs, delivery_points, deliveries, cakes, admins RESTART IDENTITY CASCADE;
+COMMIT;
+``` 
