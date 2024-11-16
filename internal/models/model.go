@@ -35,7 +35,7 @@ type DeliveryPoint struct {
 	Address      string `json:"address"`
 	Rating       int    `json:"rating"`
 	WorkingHours string `json:"status"`
-	ContactPhone int    `json:"weight"`
+	ContactPhone string `json:"contact_phone"`
 }
 
 // Order model
@@ -111,4 +111,9 @@ type ViewOrdersResponse struct {
 // CancelOrderRequest model
 type CancelOrderRequest struct {
 	OrderID int `json:"order_id"`
+}
+
+type UpdateOrderRequest struct {
+	OrderID       int    `json:"order_id"`
+	PaymentMethod string `json:"payment_method"`
 }

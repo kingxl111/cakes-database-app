@@ -45,10 +45,11 @@ func (h *Handler) NewRouter(ctx *context.Context, log *logrus.Logger, env string
 	apiRouter.Route("/api", func(r chi.Router) {
 		r.Post("/make-order", h.MakeOrder(ctx, log))
 		r.Get("/view-orders", h.ViewOrders(ctx, log))
-		r.Post("/change-order", func(w http.ResponseWriter, r *http.Request) {})
+		r.Post("/change-order", h.UpdateOrder(ctx, log))
 		r.Post("/delete-order", h.CancelOrder(ctx, log))
 
 		r.Get("/cakes", h.Cakes(ctx, log))
+		r.Get("/delivery-points", h.DeliveryPoints(ctx, log))
 	})
 
 	adminRouter := chi.NewRouter()
