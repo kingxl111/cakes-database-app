@@ -204,24 +204,21 @@ func (db *DB) restoreTable(tableName string) error {
 
 	columns := records[0]
 
-	// Генерация placeholders в формате $1, $2, ..., $N
 	placeholders := make([]string, len(columns))
 	for i := range placeholders {
 		placeholders[i] = fmt.Sprintf("$%d", i+1)
 	}
 
-	// Формирование запроса с корректными placeholders
 	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
 		tableName,
 		strings.Join(columns, ", "),
 		strings.Join(placeholders, ", "))
 
-	for _, record := range records[1:] { // Пропускаем первую строку с заголовками
+	for _, record := range records[1:] {
 		if len(record) != len(columns) {
 			return fmt.Errorf("record length does not match column length for table %s", tableName)
 		}
 
-		// Преобразование данных для Exec
 		args := make([]interface{}, len(record))
 		for i := range record {
 			args[i] = record[i]

@@ -91,6 +91,7 @@ func (h *Handler) CancelOrder(ctx *context.Context, log *logrus.Logger) http.Han
 		userID := r.Context().Value(userCtx)
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
+			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			log.Error(op, "failed to decode request", err)
 		}
 		defer func() {
@@ -108,6 +109,54 @@ func (h *Handler) CancelOrder(ctx *context.Context, log *logrus.Logger) http.Han
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func (h *Handler) DeliveryPoints(ctx *context.Context, log *logrus.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "server.delivery-points: "
+		userID := r.Context().Value(userCtx)
+
+		delPoints, err := h.services.GetDeliveryPoints()
+		if err != nil {
+			log.Error(op, "failed to get delivery points: ", err)
+			newErrorResponse(w, http.StatusInternalServerError, err.Error())
+		}
+
+		jsonData, err := json.Marshal(delPoints)
+		if err != nil {
+			log.Error("error encoding into JSON: " + err.Error())
+			newErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write(jsonData); err != nil {
+			log.Error(err.Error())
+		}
+		log.Info(op, "user: ", userID)
+	}
+}
+
+func (h *Handler) UpdateOrder(ctx *context.Context, log *logrus.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "server.update-order: "
+		var req models.UpdateOrderRequest
+		err := render.DecodeJSON(r.Body, &req)
+		if err != nil {
+			newErrorResponse(w, http.StatusBadRequest, err.Error())
+			log.Error(op, "failed to decode request", err)
+		}
+
+		userID := r.Context().Value(userCtx).(int)
+		err = h.services.UpdateOrder(userID, req.OrderID, req.PaymentMethod)
+		if err != nil {
+			newErrorResponse(w, http.StatusInternalServerError, err.Error())
+			log.Error(op, "failed to update order", err)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 	}

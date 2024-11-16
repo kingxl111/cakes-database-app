@@ -24,3 +24,11 @@ func (o *OrderService) GetOrders(userID int) (models.GetOrdersResponse, error) {
 func (o *OrderService) DeleteOrder(userID, orderID int) error {
 	return o.stg.DeleteOrder(userID, orderID)
 }
+
+func (o *OrderService) GetDeliveryPoints() ([]models.DeliveryPoint, error) {
+	return o.stg.GetDeliveryPoints()
+}
+
+func (o *OrderService) UpdateOrder(userID int, orderID int, paymentMethod string) error {
+	return o.stg.UpdateOrder(userID, orderID, paymentMethod)
+}

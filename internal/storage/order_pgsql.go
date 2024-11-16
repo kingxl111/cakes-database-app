@@ -134,7 +134,7 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 	intOrders := make([]int, 0, 10)
 	Orders := make([]models.Order, 0, 10)
 	getOrderIDsByUserIDQuery := "SELECT * FROM orders WHERE user_id = $1"
-	rows, err := o.db.pool.Query(ctx, getOrderIDsByUserIDQuery, userID)
+	rows, err := tx.Query(ctx, getOrderIDsByUserIDQuery, userID)
 	if err != nil {
 		log.Printf("error from operation: %s: %s", op, err.Error())
 		return res, err
@@ -161,7 +161,7 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 		// cakes list creation
 		intCakes := make([]int, 0, 10)
 		getCakeIDQuery := "SELECT cake_id FROM order_cakes WHERE order_id = $1"
-		rows, err := o.db.pool.Query(ctx, getCakeIDQuery, order_id)
+		rows, err := tx.Query(ctx, getCakeIDQuery, order_id)
 		if err != nil {
 			log.Printf("error from operation: %s: %s", op, err.Error())
 			return res, err
@@ -185,7 +185,7 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 		cakes := make([]models.Cake, 0, 10)
 		for _, cakeID := range intCakes {
 			getCakesQuery := "SELECT * FROM cakes WHERE id = $1"
-			rows, err := o.db.pool.Query(ctx, getCakesQuery, cakeID)
+			rows, err := tx.Query(ctx, getCakesQuery, cakeID)
 			if err != nil {
 				log.Printf("error from operation: %s: %s", op, err.Error())
 				return res, err
@@ -260,7 +260,7 @@ func (o *UserOrderManagerPostgres) DeleteOrder(userID, orderID int) error {
 		return fmt.Errorf("op: %s: %s", op, err.Error())
 	}
 
-	res, err = o.db.pool.Exec(ctx, query, args...)
+	res, err = tx.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("op: %s: %s", op, err.Error())
 	}
@@ -278,7 +278,7 @@ func (o *UserOrderManagerPostgres) DeleteOrder(userID, orderID int) error {
 		return fmt.Errorf("op: %s: %s", op, err.Error())
 	}
 
-	res, err = o.db.pool.Exec(ctx, query, args...)
+	res, err = tx.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("op: %s: %s", op, err.Error())
 	}
@@ -294,7 +294,7 @@ func (o *UserOrderManagerPostgres) DeleteOrder(userID, orderID int) error {
 	if err != nil {
 		return fmt.Errorf("op: %s: %s", op, err.Error())
 	}
-	res, err = o.db.pool.Exec(ctx, query, args...)
+	res, err = tx.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("op: %s: %s", op, err.Error())
 	}
@@ -309,4 +309,76 @@ func (o *UserOrderManagerPostgres) DeleteOrder(userID, orderID int) error {
 	}
 
 	return nil
+}
+
+func (o *UserOrderManagerPostgres) UpdateOrder(userID int, orderID int, paymentMethod string) error {
+	const op = "pgsql.UpdateOrder"
+	ctx := context.Background()
+	tx, err := o.db.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("op: %s: could not begin transaction: %s", op, err.Error())
+	}
+
+	query, args, err := sq.Update(OrderTable).
+		PlaceholderFormat(sq.Dollar).
+		Set("payment_method", paymentMethod).
+		Where(sq.Eq{"id": orderID}).
+		Where(sq.Eq{"user_id": userID}).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+	res, err := tx.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+	if res.RowsAffected() == 0 {
+		return fmt.Errorf("op: %s: %s", op, "no rows updated")
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+	return nil
+}
+
+func (o *UserOrderManagerPostgres) GetDeliveryPoints() ([]models.DeliveryPoint, error) {
+	const op = "pgsql.GetDeliveryPoints"
+	points := make([]models.DeliveryPoint, 0, 10)
+	ctx := context.Background()
+	tx, err := o.db.pool.Begin(ctx)
+	if err != nil {
+		return points, fmt.Errorf("op: %s: could not begin transaction: %s", op, err.Error())
+	}
+
+	qeury, args, err := sq.Select("id", "rating", "address", "working_hours", "contact_phone").
+		From(DeliveryPointTable).
+		PlaceholderFormat(sq.Dollar).
+		ToSql()
+	if err != nil {
+		return points, fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+	res, err := tx.Query(ctx, qeury, args...)
+	if err != nil {
+		return points, fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+
+	for res.Next() {
+		var point models.DeliveryPoint
+		err := res.Scan(&point.ID, &point.Rating, &point.Address, &point.WorkingHours, &point.ContactPhone)
+		if err != nil {
+			return points, fmt.Errorf("op: %s: %s", op, err.Error())
+		}
+		points = append(points, point)
+	}
+	if err := res.Err(); err != nil {
+		return points, fmt.Errorf("op: %s: %s", op, err.Error())
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return points, fmt.Errorf("op: %s: could not commit transaction: %s", op, err.Error())
+	}
+
+	return points, nil
 }
