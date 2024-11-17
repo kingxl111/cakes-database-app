@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"errors"
 
 	"github.com/kingxl111/cakes-database-app/internal/models"
@@ -11,8 +12,15 @@ import (
 
 const adminSigningKey = "a1kvoai45is9cklaa;sgdhsudvk"
 
+var _ AdminAuthorization = (*AdminAuthorizationService)(nil)
+var _ AdminService = (*AdminServ)(nil)
+
 type AdminAuthorizationService struct {
 	stg storage.AdminAuthorization
+}
+
+type AdminServ struct {
+	stg storage.Admin
 }
 
 func NewAdminAuthService(stg storage.AdminAuthorization) *AdminAuthorizationService {
@@ -58,10 +66,6 @@ func (s *AdminAuthorizationService) ParseAdminToken(accessToken string) (int, er
 	return claims.AdminID, nil
 }
 
-type AdminServ struct {
-	stg storage.Admin
-}
-
 func NewAdminService(stg storage.Admin) *AdminServ {
 	return &AdminServ{stg: stg}
 }
@@ -76,4 +80,12 @@ func (a *AdminServ) Backup() error {
 
 func (a *AdminServ) Restore() error {
 	return a.stg.Restore()
+}
+
+func (a *AdminServ) AddCake(ctx context.Context, cake models.Cake) (int, error) {
+	return a.stg.AddCake(ctx, cake)
+}
+
+func (a *AdminServ) RemoveCake(ctx context.Context, cake int) error {
+	return a.stg.RemoveCake(ctx, cake)
 }

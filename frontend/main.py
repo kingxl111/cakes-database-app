@@ -70,37 +70,6 @@ def admin_sign_in(username, password):
     response = requests.post(f"{API_BASE_URL}/adm/sign-in", json={"username": username, "password": password})
     return response
 
-#
-# # Страница авторизации
-# def authorization_page():
-#     st.title("Авторизация")
-#     auth_action = st.radio("Выберите действие", ["Войти", "Зарегистрироваться"])
-#
-#     username = st.text_input("Никнейм")
-#     password = st.text_input("Пароль", type="password")
-#
-#     if auth_action == "Войти":
-#         if st.button("Войти"):
-#             response = sign_in(username, password)
-#             if response.status_code == 200:
-#                 result = response.json()
-#                 st.success("Вы успешно вошли в систему!")
-#                 st.session_state["jwt_token"] = result.get("token")
-#                 st.rerun()  # Перезагрузка страницы после входа
-#             else:
-#                 st.error("Ошибка авторизации")
-#     elif auth_action == "Зарегистрироваться":
-#         fullname = st.text_input("ФИО")
-#         email = st.text_input("Электронная почта")
-#         phone_number = st.text_input("Номер телефона")
-#         if st.button("Зарегистрироваться"):
-#             response = sign_up(fullname, username, email, password, phone_number)
-#             if response.status_code == 200:
-#                 st.success("Регистрация успешна!")
-#             else:
-#                 st.error("Ошибка регистрации")
-
-
 def authorization_page():
     st.title("Авторизация")
     auth_action = st.radio("Выберите действие", ["Войти", "Войти как администратор", "Зарегистрироваться"])
@@ -176,7 +145,7 @@ def manage_cakes_page():
 
             # Удалить торт
             if st.button(f"Удалить {cake['description']}", key=cake['id']):
-                delete_response = api_request("POST", f"/adm/manage-cakes/remove-cakes", json={"id": cake["id"]})
+                delete_response = api_request("POST", f"/adm/manage-cakes/remove-cake", json={"id": cake["id"]})
                 if delete_response.status_code == 200:
                     st.success(f"{cake['description']} удален!")
                 else:
@@ -184,14 +153,14 @@ def manage_cakes_page():
 
         # Добавление нового торта
         st.subheader("Добавить новый торт")
-        new_description = st.text_input("Описание")
-        new_price = st.number_input("Цена", min_value=0.0, step=0.1)
+        new_description = st.text_input("Название")
+        new_price = st.number_input("Цена", min_value=0.0, step=0.5)
         new_weight = st.number_input("Вес (г)", min_value=0, step=50)
         if st.button("Добавить торт"):
-            add_response = api_request("POST", "/adm/manage-cakes/add-cakes", json={
+            add_response = api_request("POST", "/adm/manage-cakes/add-cake", json={
                 "description": new_description,
-                "price": new_price,
-                "weight": new_weight
+                "price": int(new_price),
+                "weight": int(new_weight)
             })
             if add_response.status_code == 200:
                 st.success("Торт успешно добавлен!")

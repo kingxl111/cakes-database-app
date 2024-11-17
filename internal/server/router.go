@@ -69,8 +69,8 @@ func (h *Handler) NewRouter(ctx *context.Context, log *logrus.Logger, env string
 
 		admManagerRouter.Route("/manage-cakes", func(r chi.Router) {
 			r.Get("/cakes", h.Cakes(ctx, log))
-			r.Post("/add-cakes", func(w http.ResponseWriter, r *http.Request) {})
-			r.Post("/remove-cakes", func(w http.ResponseWriter, r *http.Request) {})
+			r.Post("/add-cake", h.AddCake(ctx, log))
+			r.Post("/remove-cake", h.RemoveCake(ctx, log))
 			r.Post("/update-cake/{id}", func(w http.ResponseWriter, r *http.Request) {})
 		})
 
