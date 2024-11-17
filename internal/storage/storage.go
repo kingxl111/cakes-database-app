@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"github.com/kingxl111/cakes-database-app/internal/models"
 )
 
@@ -40,6 +41,9 @@ type Admin interface {
 	//DeleteUser(userID int) error
 	Backup() error
 	Restore() error
+
+	AddCake(ctx context.Context, cake models.Cake) (int, error)
+	RemoveCake(ctx context.Context, id int) error
 }
 
 func NewStorage(db *DB) *Storage {

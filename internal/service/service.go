@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"github.com/kingxl111/cakes-database-app/internal/models"
 	"github.com/kingxl111/cakes-database-app/internal/storage"
 )
@@ -42,6 +43,9 @@ type AdminService interface {
 	GetUsers() ([]models.User, error)
 	Backup() error
 	Restore() error
+
+	AddCake(ctx context.Context, cake models.Cake) (int, error)
+	RemoveCake(ctx context.Context, id int) error
 }
 
 func NewService(storage *storage.Storage) *Service {

@@ -13,6 +13,8 @@ import (
 	"github.com/kingxl111/cakes-database-app/internal/models"
 )
 
+var _ AdminAuthorization = (*AdminAuthPostgres)(nil)
+
 type AdminAuthPostgres struct {
 	db *DB
 }
@@ -41,6 +43,8 @@ func (a *AdminAuthPostgres) GetAdmin(username, passwordHash string) (int, error)
 	}
 	return id, nil
 }
+
+var _ Admin = (*AdminPostgres)(nil)
 
 type AdminPostgres struct {
 	db *DB
@@ -256,6 +260,46 @@ func (a *AdminPostgres) Restore() error {
 	}
 	if err = tx.Commit(ctx); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func (a *AdminPostgres) AddCake(ctx context.Context, cake models.Cake) (int, error) {
+	const op = "storage.AddCake"
+	var id int
+	builder := sq.Insert(CakesTable).
+		PlaceholderFormat(sq.Dollar).
+		Columns("description", "price", "weight").
+		Values(cake.Description, cake.Price, cake.Weight).
+		Suffix("RETURNING id")
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return id, fmt.Errorf("error building query: %w", err)
+	}
+	err = a.db.pool.QueryRow(ctx, query, args...).Scan(&id)
+	if err != nil {
+		return id, fmt.Errorf("error executing query: %w", err)
+	}
+
+	return id, nil
+}
+
+func (a *AdminPostgres) RemoveCake(ctx context.Context, id int) error {
+	const op = "storage.RemoveCake"
+
+	builder := sq.Delete(CakesTable).
+		PlaceholderFormat(sq.Dollar).
+		Where(sq.Eq{"id": id})
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return fmt.Errorf("error building query: %w", err)
+	}
+
+	_, err = a.db.pool.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("error executing query: %w", err)
 	}
 
 	return nil
