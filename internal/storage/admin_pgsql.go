@@ -276,7 +276,7 @@ func (a *AdminPostgres) AddCake(ctx context.Context, cake models.Cake) (int, err
 
 	query, args, err := builder.ToSql()
 	if err != nil {
-		return id, fmt.Errorf("error building query: %w", err)
+		return id, fmt.Errorf("error building query: %s, %s", op, err)
 	}
 	err = a.db.pool.QueryRow(ctx, query, args...).Scan(&id)
 	if err != nil {
@@ -294,7 +294,7 @@ func (a *AdminPostgres) RemoveCake(ctx context.Context, id int) error {
 		Where(sq.Eq{"id": id})
 	query, args, err := builder.ToSql()
 	if err != nil {
-		return fmt.Errorf("error building query: %w", err)
+		return fmt.Errorf("error building query: %s, %s", op, err)
 	}
 
 	_, err = a.db.pool.Exec(ctx, query, args...)
