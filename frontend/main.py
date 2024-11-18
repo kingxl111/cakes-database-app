@@ -156,11 +156,13 @@ def manage_cakes_page():
         new_description = st.text_input("Название")
         new_price = st.number_input("Цена", min_value=0.0, step=0.5)
         new_weight = st.number_input("Вес (г)", min_value=0, step=50)
+        new_full_description = st.text_input("Описание")
         if st.button("Добавить торт"):
             add_response = api_request("POST", "/adm/manage-cakes/add-cake", json={
                 "description": new_description,
                 "price": int(new_price),
-                "weight": int(new_weight)
+                "weight": int(new_weight),
+                "full_description": new_full_description
             })
             if add_response.status_code == 200:
                 st.success("Торт успешно добавлен!")
@@ -187,7 +189,6 @@ def database_management_page():
         else:
             st.error("Ошибка восстановления базы данных")
 
-
 def main():
     st.sidebar.title("Меню")
 
@@ -207,47 +208,54 @@ def main():
                 st.success("Вы вышли из системы!")
                 st.rerun()
         else:
-            menu = st.sidebar.radio("Навигация", ["Каталог", "МАИ заказы", "Сделать заказ", "Выйти"])
-            if menu == "Каталог":
-                catalog_page()
-            elif menu == "МАИ заказы":
-                orders_page()
-            elif menu == "Сделать заказ":
-                create_order_page()
-            elif menu == "Выйти":
-                st.session_state["jwt_token"] = None
-                st.success("Вы вышли из системы!")
-                st.rerun()  # Перезагрузка страницы после выхода
+            # Маршрутизация на основе состояния
+            if st.session_state.get("current_page") == "cake_detail":
+                cake_id = st.session_state.get("current_cake_id")
+                if cake_id:
+                    cake_detail_page(cake_id)
+            else:
+                menu = st.sidebar.radio("Навигация", ["Каталог", "МАИ заказы", "Сделать заказ", "Выйти"])
+                if menu == "Каталог":
+                    catalog_page()
+                elif menu == "МАИ заказы":
+                    orders_page()
+                elif menu == "Сделать заказ":
+                    create_order_page()
+                elif menu == "Выйти":
+                    st.session_state["jwt_token"] = None
+                    st.success("Вы вышли из системы!")
+                    st.rerun()  # Перезагрузка страницы после выхода
     else:
         menu = st.sidebar.radio("Навигация", ["Авторизация"])
         if menu == "Авторизация":
             authorization_page()
 
-# Страница каталога
-def catalog_page():
-    st.title("Каталог тортов")
-    response = get_cakes()
-    if response.status_code == 200:
-        cakes = response.json()
 
-        # Создаем колонки для отображения тортов
-        cols = st.columns(4)  # Выведем 3 колонки для тортов
-
-        for i, cake in enumerate(cakes):
-            # Определяем колонку для текущего торта
-            col = cols[i % 4]  # Выбираем колонку по индексу
-            with col:
-                # Отображаем изображение торта
-                if 'image_url' in cake:  # Если в данных есть ссылка на изображение
-                    st.image(cake['image_url'], use_container_width=True)
-                else:
-                    st.image("https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg", use_container_width=True)  # Плейсхолдер на случай отсутствия изображения
-                # Отображаем описание и цену торта
-                st.subheader(cake["description"])
-                st.text(f"Цена: {cake['price']} $")
-
-    else:
-        st.warning("Ошибка загрузки каталога")
+# # Страница каталога
+# def catalog_page():
+#     st.title("Каталог тортов")
+#     response = get_cakes()
+#     if response.status_code == 200:
+#         cakes = response.json()
+#
+#         # Создаем колонки для отображения тортов
+#         cols = st.columns(4)  # Выведем 3 колонки для тортов
+#
+#         for i, cake in enumerate(cakes):
+#             # Определяем колонку для текущего торта
+#             col = cols[i % 4]  # Выбираем колонку по индексу
+#             with col:
+#                 # Отображаем изображение торта
+#                 if 'image_url' in cake:  # Если в данных есть ссылка на изображение
+#                     st.image(cake['image_url'], use_container_width=True)
+#                 else:
+#                     st.image("https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg", use_container_width=True)  # Плейсхолдер на случай отсутствия изображения
+#                 # Отображаем описание и цену торта
+#                 st.subheader(cake["description"])
+#                 st.text(f"Цена: {cake['price']} $")
+#
+#     else:
+#         st.warning("Ошибка загрузки каталога")
 
 def update_order(order_id, payment_method):
     data = {"order_id": order_id, "payment_method": payment_method}
@@ -285,7 +293,8 @@ def orders_page():
                     new_payment_method = st.radio(
                         "Выберите новый способ оплаты",
                         ["Card", "Cash", "Online Payment"],
-                        index=["Card", "Cash", "Online Payment"].index(order["payment_method"])
+                        index=["Card", "Cash", "Online Payment"].index(order["payment_method"]),
+                        key=f"payment_method_{order['id']}"  # Уникальный ключ с использованием ID заказа
                     )
                     if st.button(f"Изменить способ оплаты для заказа #{order['id']}"):
                         update_response = update_order(order['id'], new_payment_method)
@@ -364,6 +373,57 @@ def create_order_page():
             st.success("Заказ успешно оформлен!")
         else:
             st.error("Ошибка оформления заказа.")
+
+def catalog_page():
+    st.title("Каталог тортов")
+    response = get_cakes()
+    if response.status_code == 200:
+        cakes = response.json()
+
+        # Создаем колонки для отображения тортов
+        cols = st.columns(4)
+
+        for i, cake in enumerate(cakes):
+            # Определяем колонку для текущего торта
+            col = cols[i % 4]
+            with col:
+                # Отображаем изображение торта
+                st.image(
+                    cake.get('image_url', "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"),
+                    use_container_width=True
+                )
+                if st.button(cake["description"], key=cake["id"]):
+                    st.session_state["current_cake_id"] = cake["id"]
+                    st.session_state["current_page"] = "cake_detail"
+                    st.rerun()
+                st.text(f"Цена: {cake['price']} $")
+    else:
+        st.warning("Ошибка загрузки каталога")
+
+
+def cake_detail_page(cake_id):
+    st.title("Детальная информация о торте")
+    response = api_request("GET", f"/api/cakes/{cake_id}")  # Запрос данных торта по ID
+    if response.status_code == 200:
+        cake = response.json()
+
+        # Отображение информации о торте
+        st.image(
+            cake.get('image_url', "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"),
+            use_container_width=True
+        )
+        st.subheader(cake["description"])
+        st.text(f"Цена: {cake['price']} $")
+        st.text(f"Вес: {cake['weight']} г")
+        st.text("Описание:")
+        st.write(cake["full_description"])
+
+        # Кнопка "Назад"
+        if st.button("Назад в каталог"):
+            st.session_state["current_page"] = "catalog"  # Перенаправляем пользователя на каталог
+            st.rerun()  # Перезагружаем страницу, чтобы отобразить каталог
+    else:
+        st.error("Ошибка загрузки информации о торте")
 
 if __name__ == "__main__":
     main()

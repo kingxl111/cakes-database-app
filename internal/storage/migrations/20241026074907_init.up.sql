@@ -11,7 +11,8 @@ CREATE TABLE cakes (
     id SERIAL PRIMARY KEY,
     description TEXT NOT NULL,
     price INT NOT NULL,
-    weight INT NOT NULL
+    weight INT NOT NULL,
+    full_description TEXT NOT NULL
 );
 
 CREATE TABLE delivery_points (

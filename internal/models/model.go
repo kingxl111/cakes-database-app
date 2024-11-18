@@ -4,10 +4,11 @@ import "time"
 
 // Cake model
 type Cake struct {
-	ID          int    `json:"id"`
-	Description string `json:"description"`
-	Price       int    `json:"price"`
-	Weight      int    `json:"weight"`
+	ID              int    `json:"id"`
+	Description     string `json:"description"`
+	Price           int    `json:"price"`
+	Weight          int    `json:"weight"`
+	FullDescription string `json:"full_description"`
 }
 
 // User model

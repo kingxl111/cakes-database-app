@@ -33,6 +33,7 @@ type OrderManager interface {
 
 type CakeManager interface {
 	GetCakes() ([]models.Cake, error)
+	GetCake(id int) (models.Cake, error)
 }
 
 type AdminAuthorization interface {

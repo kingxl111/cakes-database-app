@@ -3,13 +3,13 @@ package server
 import (
 	"context"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/sirupsen/logrus"
 
 	"github.com/kingxl111/cakes-database-app/internal/service"
 
 	"net/http"
-
-	"github.com/go-chi/chi"
 )
 
 type Handler struct {
@@ -49,6 +49,7 @@ func (h *Handler) NewRouter(ctx *context.Context, log *logrus.Logger, env string
 		r.Post("/delete-order", h.CancelOrder(ctx, log))
 
 		r.Get("/cakes", h.Cakes(ctx, log))
+		r.Get("/cakes/{id}", h.Cake(ctx, log))
 		r.Get("/delivery-points", h.DeliveryPoints(ctx, log))
 	})
 

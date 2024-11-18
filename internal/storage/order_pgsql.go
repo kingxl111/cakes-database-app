@@ -133,8 +133,18 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 	// getting all order_id's of this user (prepare)
 	intOrders := make([]int, 0, 10)
 	Orders := make([]models.Order, 0, 10)
-	getOrderIDsByUserIDQuery := "SELECT * FROM orders WHERE user_id = $1"
-	rows, err := tx.Query(ctx, getOrderIDsByUserIDQuery, userID)
+
+	builder := sq.Select("*").
+		From(OrderTable).
+		PlaceholderFormat(sq.Dollar).
+		Where(sq.Eq{"user_id": userID})
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+	}
+
+	//getOrderIDsByUserIDQuery := "SELECT * FROM orders WHERE user_id = $1"
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		log.Printf("error from operation: %s: %s", op, err.Error())
 		return res, err
@@ -145,34 +155,40 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 		var or models.Order
 		err := rows.Scan(&or.ID, &or.Time, &or.OrderStatus, &or.UserID, &or.PaymentMethod, &or.Cost)
 		if err != nil {
-			log.Printf("error from operation: %s: %s", op, err.Error())
-			return res, fmt.Errorf("could not begin transaction: %v", err)
+			return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
 		}
 		intOrders = append(intOrders, or.ID)
 		Orders = append(Orders, or)
 	}
 	if err := rows.Err(); err != nil {
-		log.Printf("error from operation: %s: %s", op, err.Error())
-		return res, err
+		return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
 	}
 
 	// main loop
-	for i, order_id := range intOrders {
+	for i, orderId := range intOrders {
 		// cakes list creation
 		intCakes := make([]int, 0, 10)
-		getCakeIDQuery := "SELECT cake_id FROM order_cakes WHERE order_id = $1"
-		rows, err := tx.Query(ctx, getCakeIDQuery, order_id)
+		builder := sq.Select("cake_id").
+			From(OrdersCakesTable).
+			PlaceholderFormat(sq.Dollar).
+			Where(sq.Eq{"order_id": orderId})
+		query, args, err := builder.ToSql()
+		if err != nil {
+			return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+		}
+
+		//getCakeIDQuery := "SELECT cake_id FROM order_cakes WHERE order_id = $1"
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			log.Printf("error from operation: %s: %s", op, err.Error())
 			return res, err
 		}
-		defer rows.Close()
+
 		for rows.Next() {
 			var id int
 			err := rows.Scan(&id)
 			if err != nil {
-				log.Printf("error from operation: %s: %s", op, err.Error())
-				return res, err
+				return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
 			}
 			intCakes = append(intCakes, id)
 		}
@@ -184,25 +200,30 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 		// next station is cakes table!
 		cakes := make([]models.Cake, 0, 10)
 		for _, cakeID := range intCakes {
-			getCakesQuery := "SELECT * FROM cakes WHERE id = $1"
-			rows, err := tx.Query(ctx, getCakesQuery, cakeID)
+			builder := sq.Select("id", "description", "price", "weight", "full_description").
+				From(CakesTable).
+				PlaceholderFormat(sq.Dollar).
+				Where(sq.Eq{"id": cakeID})
+			query, args, err := builder.ToSql()
 			if err != nil {
-				log.Printf("error from operation: %s: %s", op, err.Error())
-				return res, err
+				return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
 			}
-			defer rows.Close()
+
+			rows, err := tx.Query(ctx, query, args...)
+			if err != nil {
+				return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+			}
+
 			for rows.Next() {
 				var cake models.Cake
-				err := rows.Scan(&cake.ID, &cake.Description, &cake.Price, &cake.Weight)
+				err := rows.Scan(&cake.ID, &cake.Description, &cake.Price, &cake.Weight, &cake.FullDescription)
 				if err != nil {
-					log.Printf("error from operation: %s: %s", op, err.Error())
-					return res, err
+					return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
 				}
 				cakes = append(cakes, cake)
 			}
 			if err := rows.Err(); err != nil {
-				log.Printf("error from operation: %s: %s", op, err.Error())
-				return res, err
+				return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
 			}
 		}
 
@@ -215,8 +236,7 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		log.Printf("error from operation: %s: %s", op, err.Error())
-		return res, err
+		return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
 	}
 
 	return res, nil
