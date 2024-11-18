@@ -270,8 +270,8 @@ func (a *AdminPostgres) AddCake(ctx context.Context, cake models.Cake) (int, err
 	var id int
 	builder := sq.Insert(CakesTable).
 		PlaceholderFormat(sq.Dollar).
-		Columns("description", "price", "weight").
-		Values(cake.Description, cake.Price, cake.Weight).
+		Columns("description", "price", "weight", "full_description").
+		Values(cake.Description, cake.Price, cake.Weight, cake.FullDescription).
 		Suffix("RETURNING id")
 
 	query, args, err := builder.ToSql()
@@ -280,7 +280,7 @@ func (a *AdminPostgres) AddCake(ctx context.Context, cake models.Cake) (int, err
 	}
 	err = a.db.pool.QueryRow(ctx, query, args...).Scan(&id)
 	if err != nil {
-		return id, fmt.Errorf("error executing query: %w", err)
+		return id, fmt.Errorf("op: %s, error executing query: %w", op, err)
 	}
 
 	return id, nil

@@ -20,7 +20,7 @@ func NewUserCakeManagerPostgres(db *DB) *UserCakeManagerPostgres {
 func (c *UserCakeManagerPostgres) GetCakes() ([]models.Cake, error) {
 	cakes := make([]models.Cake, 0, 10)
 
-	builderSelect := sq.Select("id", "description", "price", "weight").
+	builderSelect := sq.Select("id", "description", "price", "weight", "full_description").
 		From(CakesTable).
 		PlaceholderFormat(sq.Dollar)
 
@@ -35,7 +35,7 @@ func (c *UserCakeManagerPostgres) GetCakes() ([]models.Cake, error) {
 	}
 	for rows.Next() {
 		var cake models.Cake
-		err := rows.Scan(&cake.ID, &cake.Description, &cake.Price, &cake.Weight)
+		err := rows.Scan(&cake.ID, &cake.Description, &cake.Price, &cake.Weight, &cake.FullDescription)
 		if err != nil {
 			return nil, err
 		}
