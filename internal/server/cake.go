@@ -57,7 +57,7 @@ func (h *Handler) Cake(ctx *context.Context, log *logrus.Logger) http.HandlerFun
 		cake, err := h.services.GetCake(idInt)
 		if err != nil {
 			log.Error(op, "failed to get cake", err)
-			newErrorResponse(w, http.StatusInternalServerError, err.Error())
+			newErrorResponse(w, http.StatusBadRequest, err.Error())
 			return
 		}
 
