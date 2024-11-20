@@ -37,7 +37,6 @@ func (o *UserOrderManagerPostgres) CreateOrder(userID int, delivery models.Deliv
 		builderSelect := sq.Select("price").
 			From(CakesTable).
 			PlaceholderFormat(sq.Dollar).
-			Where(sq.Eq{"active": true}).
 			Where(sq.Eq{"id": id})
 
 		query, args, err := builderSelect.ToSql()
@@ -201,10 +200,9 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 		// next station is cakes table!
 		cakes := make([]models.Cake, 0, 10)
 		for _, cakeID := range intCakes {
-			builder := sq.Select("id", "description", "price", "weight", "full_description", "active").
+			builder := sq.Select("id", "description", "price", "weight", "full_description").
 				From(CakesTable).
 				PlaceholderFormat(sq.Dollar).
-				Where(sq.Eq{"active": true}).
 				Where(sq.Eq{"id": cakeID})
 			query, args, err := builder.ToSql()
 			if err != nil {
@@ -218,7 +216,7 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 
 			for rows.Next() {
 				var cake models.Cake
-				err := rows.Scan(&cake.ID, &cake.Description, &cake.Price, &cake.Weight, &cake.FullDescription, &cake.Active)
+				err := rows.Scan(&cake.ID, &cake.Description, &cake.Price, &cake.Weight, &cake.FullDescription)
 				if err != nil {
 					return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
 				}

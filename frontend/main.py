@@ -230,6 +230,33 @@ def main():
         if menu == "Авторизация":
             authorization_page()
 
+
+# # Страница каталога
+# def catalog_page():
+#     st.title("Каталог тортов")
+#     response = get_cakes()
+#     if response.status_code == 200:
+#         cakes = response.json()
+#
+#         # Создаем колонки для отображения тортов
+#         cols = st.columns(4)  # Выведем 3 колонки для тортов
+#
+#         for i, cake in enumerate(cakes):
+#             # Определяем колонку для текущего торта
+#             col = cols[i % 4]  # Выбираем колонку по индексу
+#             with col:
+#                 # Отображаем изображение торта
+#                 if 'image_url' in cake:  # Если в данных есть ссылка на изображение
+#                     st.image(cake['image_url'], use_container_width=True)
+#                 else:
+#                     st.image("https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg", use_container_width=True)  # Плейсхолдер на случай отсутствия изображения
+#                 # Отображаем описание и цену торта
+#                 st.subheader(cake["description"])
+#                 st.text(f"Цена: {cake['price']} $")
+#
+#     else:
+#         st.warning("Ошибка загрузки каталога")
+
 def update_order(order_id, payment_method):
     data = {"order_id": order_id, "payment_method": payment_method}
     response = api_request("POST", "/api/change-order", json=data)

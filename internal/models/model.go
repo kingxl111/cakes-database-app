@@ -9,7 +9,6 @@ type Cake struct {
 	Price           int    `json:"price"`
 	Weight          int    `json:"weight"`
 	FullDescription string `json:"full_description"`
-	Active          bool   `json:"active"`
 }
 
 // User model
