@@ -24,8 +24,10 @@ func (c *CakeService) GetCake(id int) (models.Cake, error) {
 	if err != nil {
 		return models.Cake{}, err
 	}
-	if id > 0 && id <= len(ar) {
-		return ar[id-1], nil
+	for idx, cake := range ar {
+		if cake.ID == id {
+			return ar[idx], nil
+		}
 	}
 	return models.Cake{}, fmt.Errorf("wrong cake index: %v", id)
 }

@@ -18,11 +18,12 @@ func NewUserCakeManagerPostgres(db *DB) *UserCakeManagerPostgres {
 }
 
 func (c *UserCakeManagerPostgres) GetCakes() ([]models.Cake, error) {
-	cakes := make([]models.Cake, 0, 10)
+	cakes := make([]models.Cake, 0, 50)
 
 	builderSelect := sq.Select("id", "description", "price", "weight", "full_description").
 		From(CakesTable).
-		PlaceholderFormat(sq.Dollar)
+		PlaceholderFormat(sq.Dollar).
+		Where(sq.Eq{"active": true})
 
 	query, args, err := builderSelect.ToSql()
 	if err != nil {
