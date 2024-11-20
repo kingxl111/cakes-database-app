@@ -270,8 +270,8 @@ func (a *AdminPostgres) AddCake(ctx context.Context, cake models.Cake) (int, err
 	var id int
 	builder := sq.Insert(CakesTable).
 		PlaceholderFormat(sq.Dollar).
-		Columns("description", "price", "weight", "full_description", "active").
-		Values(cake.Description, cake.Price, cake.Weight, cake.FullDescription, true).
+		Columns("description", "price", "weight", "full_description").
+		Values(cake.Description, cake.Price, cake.Weight, cake.FullDescription).
 		Suffix("RETURNING id")
 
 	query, args, err := builder.ToSql()
@@ -289,8 +289,7 @@ func (a *AdminPostgres) AddCake(ctx context.Context, cake models.Cake) (int, err
 func (a *AdminPostgres) RemoveCake(ctx context.Context, id int) error {
 	const op = "storage.RemoveCake"
 
-	builder := sq.Update(CakesTable).
-		Set("active", false).
+	builder := sq.Delete(CakesTable).
 		PlaceholderFormat(sq.Dollar).
 		Where(sq.Eq{"id": id})
 	query, args, err := builder.ToSql()
