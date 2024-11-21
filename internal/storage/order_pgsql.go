@@ -138,13 +138,13 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 	builder := sq.Select("*").
 		From(OrderTable).
 		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"user_id": userID})
+		Where(sq.Eq{"user_id": userID}).
+		Where(sq.NotEq{"order_status": "canceled"})
 	query, args, err := builder.ToSql()
 	if err != nil {
 		return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
 	}
 
-	//getOrderIDsByUserIDQuery := "SELECT * FROM orders WHERE user_id = $1"
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		log.Printf("error from operation: %s: %s", op, err.Error())
@@ -274,55 +274,22 @@ func (o *UserOrderManagerPostgres) DeleteOrder(userID, orderID int) error {
 		return fmt.Errorf("can't find user's order: %s: %s", op, "no rows affected")
 	}
 
-	query, args, err = sq.Delete(OrdersCakesTable).
+	query, args, err = sq.Update(OrderTable).
 		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"order_id": orderID}).
-		ToSql()
-	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
-	}
-
-	res, err = tx.Exec(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
-	}
-
-	rowsAffected = res.RowsAffected()
-	if rowsAffected == 0 {
-		return fmt.Errorf("op: %s: %s", op, "could not delete order")
-	}
-
-	query, args, err = sq.Delete(DeliveryTable).
-		PlaceholderFormat(sq.Dollar).
+		Set("order_status", "canceled").
 		Where(sq.Eq{"id": orderID}).
+		Where(sq.Eq{"user_id": userID}).
 		ToSql()
 	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
-	}
-
-	res, err = tx.Exec(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
-	}
-	rowsAffected = res.RowsAffected()
-	if rowsAffected == 0 {
-		return fmt.Errorf("op: %s: %s", op, "could not delete order")
-	}
-
-	query, args, err = sq.Delete(OrderTable).
-		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"id": orderID}).
-		ToSql()
-	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
+		return fmt.Errorf("can't exec: %s: %s", op, err.Error())
 	}
 	res, err = tx.Exec(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
+		return fmt.Errorf("can't exec: %s: %s", op, err.Error())
 	}
 	rowsAffected = res.RowsAffected()
 	if rowsAffected == 0 {
-		return fmt.Errorf("op: %s: %s", op, "could not delete order")
+		return fmt.Errorf("can't find user's order: %s: %s", op, "no rows affected")
 	}
 
 	err = tx.Commit(ctx)
