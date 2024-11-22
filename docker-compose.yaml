@@ -14,9 +14,26 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   migrator-local:
+    container_name: sola-db-migrator
     build:
       context: .
       dockerfile: migration_local.Dockerfile
+    restart: on-failure
+
+  backup:
+    build:
+      context: .
+      dockerfile: backup.Dockerfile
+    container_name: sola-backup
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+    volumes:
+      - backup_data:/backups
+    depends_on:
+      - db
     restart: on-failure
 
   app:
@@ -37,3 +54,4 @@ services:
 
 volumes:
   postgres_data:
+  backup_data:
