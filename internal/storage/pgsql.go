@@ -16,6 +16,35 @@ const (
 	CakesTable         = "cakes"
 	DeliveryPointTable = "delivery_points"
 	AdminTable         = "admins"
+
+	idColumn       = "id"
+	usernameColumn = "username"
+	passwordColumn = "password_hash"
+	emailColumn    = "email"
+	phoneColumn    = "phone_number"
+	fullnameColumn = "fullname"
+
+	costColumn          = "cost"
+	orderStatusColumn   = "order_status"
+	paymentMethodColumn = "payment_method"
+	userIdColumn        = "user_id"
+	orderIdColumn       = "order_id"
+	timestampColumn     = "time"
+
+	addressColumn      = "address"
+	ratingColumn       = "rating"
+	workingHoursColumn = "working_hours"
+	contactPhoneColumn = "contact_phone"
+
+	pointIdColumn        = "point_id"
+	deliveryStatusColumn = "status"
+	weightColumn         = "weight"
+
+	descriptionColumn     = "description"
+	fullDescriptionColumn = "full_description"
+	priceColumn           = "price"
+	activeColumn          = "active"
+	cakeIdColumn          = "cake_id"
 )
 
 type DB struct {

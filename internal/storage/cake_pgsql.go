@@ -18,16 +18,17 @@ func NewUserCakeManagerPostgres(db *DB) *UserCakeManagerPostgres {
 }
 
 func (c *UserCakeManagerPostgres) GetCakes() ([]models.Cake, error) {
+	const op = "pgsql.GetCakes"
 	cakes := make([]models.Cake, 0, 50)
 
-	builderSelect := sq.Select("id", "description", "price", "weight", "full_description").
+	builderSelect := sq.Select(idColumn, descriptionColumn, priceColumn, weightColumn, fullDescriptionColumn).
 		From(CakesTable).
 		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"active": true})
+		Where(sq.Eq{activeColumn: true})
 
 	query, args, err := builderSelect.ToSql()
 	if err != nil {
-		return cakes, fmt.Errorf("failed to build query: %v", err.Error())
+		return cakes, fmt.Errorf("op: %s, failed to build query: %w", op, err)
 	}
 
 	rows, err := c.db.pool.Query(context.Background(), query, args...)
@@ -38,12 +39,12 @@ func (c *UserCakeManagerPostgres) GetCakes() ([]models.Cake, error) {
 		var cake models.Cake
 		err := rows.Scan(&cake.ID, &cake.Description, &cake.Price, &cake.Weight, &cake.FullDescription)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("op: %s, failed to scan row: %w", op, err)
 		}
 		cakes = append(cakes, cake)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("op: %s, failed to scan rows: %w", op, err)
 	}
 
 	return cakes, nil

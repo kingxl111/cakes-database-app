@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	sq "github.com/Masterminds/squirrel"
@@ -21,11 +20,11 @@ func NewUserOrderManagerPostgres(db *DB) *UserOrderManagerPostgres {
 
 func (o *UserOrderManagerPostgres) CreateOrder(userID int, delivery models.Delivery, cakes []models.Cake, paymentMethod string) (int, error) {
 	var orderID int
-	// tx begin
+	const op = "pgsql.CreateOrder"
 	ctx := context.Background()
 	tx, err := o.db.pool.Begin(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("could not begin transaction: %v", err)
+		return 0, fmt.Errorf("op: %s, could not begin transaction: %w", op, err)
 	}
 
 	// calculate common order's cakes cost by cakes ids:
@@ -34,15 +33,15 @@ func (o *UserOrderManagerPostgres) CreateOrder(userID int, delivery models.Deliv
 		var price int
 		id := cake.ID
 
-		builderSelect := sq.Select("price").
+		builderSelect := sq.Select(priceColumn).
 			From(CakesTable).
 			PlaceholderFormat(sq.Dollar).
-			Where(sq.Eq{"active": true}).
-			Where(sq.Eq{"id": id})
+			Where(sq.Eq{activeColumn: true}).
+			Where(sq.Eq{idColumn: id})
 
 		query, args, err := builderSelect.ToSql()
 		if err != nil {
-			return orderID, fmt.Errorf("could not build query: %v", err.Error())
+			return orderID, fmt.Errorf("op: %s, could not build query: %w", op, err)
 		}
 
 		err = tx.QueryRow(ctx, query, args...).Scan(&price)
@@ -64,37 +63,33 @@ func (o *UserOrderManagerPostgres) CreateOrder(userID int, delivery models.Deliv
 
 	builderInsert := sq.Insert(OrderTable).
 		PlaceholderFormat(sq.Dollar).
-		Columns("time",
-			"order_status",
-			"user_id",
-			"payment_method",
-			"cost").
-		Values(order.Time,
-			order.OrderStatus,
-			order.UserID,
-			order.PaymentMethod,
-			order.Cost).
+		Columns(timestampColumn, orderStatusColumn, userIdColumn, paymentMethodColumn, costColumn).
+		Values(order.Time, order.OrderStatus, order.UserID, order.PaymentMethod, order.Cost).
 		Suffix("RETURNING id")
 	query, args, err := builderInsert.ToSql()
 	if err != nil {
-		return orderID, fmt.Errorf("could not build query: %v", err.Error())
+		return orderID, fmt.Errorf("op: %s, could not build query: %w", op, err)
 	}
 
 	err = tx.QueryRow(ctx, query, args...).Scan(&orderID)
 	if err != nil {
-		return 0, fmt.Errorf("could not insert order: %v", err)
+		return orderID, fmt.Errorf("op: %s, could not insert order: %w", op, err)
 	}
 
 	var deliveryID int // the same with orderID
-	deliveryQuery := `INSERT INTO deliveries (point_id, cost, status, weight) VALUES ($1, $2, $3, $4) RETURNING id`
-	err = tx.QueryRow(ctx,
-		deliveryQuery,
-		delivery.PointID,
-		delivery.Cost,
-		delivery.Status,
-		delivery.Weight).Scan(&deliveryID)
+	builderInsert = sq.Insert(DeliveryTable).
+		PlaceholderFormat(sq.Dollar).
+		Columns(pointIdColumn, costColumn, deliveryStatusColumn, weightColumn).
+		Values(delivery.PointID, delivery.Cost, delivery.Status, delivery.Weight).
+		Suffix("RETURNING id")
+
+	query, args, err = builderInsert.ToSql()
 	if err != nil {
-		return 0, fmt.Errorf("could not insert delivery: %v", err)
+		return orderID, fmt.Errorf("op: %s, could not build query: %w", op, err)
+	}
+	err = tx.QueryRow(ctx, query, args...).Scan(&deliveryID)
+	if err != nil {
+		return orderID, fmt.Errorf("op: %s, could not insert delivery: %w", op, err)
 	}
 
 	for _, cake := range cakes {
@@ -102,19 +97,24 @@ func (o *UserOrderManagerPostgres) CreateOrder(userID int, delivery models.Deliv
 			OrderID: orderID,
 			CakeID:  cake.ID,
 		}
-		orderCakeQuery := `INSERT INTO order_cakes (order_id, cake_id) VALUES ($1, $2)`
-		_, err = tx.Exec(ctx,
-			orderCakeQuery,
-			orderCake.OrderID,
-			orderCake.CakeID)
+		builder := sq.Insert(OrdersCakesTable).
+			PlaceholderFormat(sq.Dollar).
+			Columns(orderIdColumn, cakeIdColumn).
+			Values(orderCake.OrderID, orderCake.CakeID)
+		query, args, err := builder.ToSql()
 		if err != nil {
-			return 0, fmt.Errorf("could not insert order-cake relation: %v", err)
+			return orderID, fmt.Errorf("op: %s, could not build query: %w", op, err)
+		}
+
+		_, err = tx.Exec(ctx, query, args...)
+		if err != nil {
+			return orderID, fmt.Errorf("op: %s, could not insert order: %w", op, err)
 		}
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return 0, fmt.Errorf("could not commit transaction: %v", err)
+		return orderID, fmt.Errorf("op: %s, could not commit transaction: %w", op, err)
 	}
 
 	return orderID, nil
@@ -127,8 +127,7 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 	ctx := context.Background()
 	tx, err := o.db.pool.Begin(ctx)
 	if err != nil {
-		log.Printf("error from operation: %s: %s", op, err.Error())
-		return res, fmt.Errorf("could not begin transaction: %v", err)
+		return res, fmt.Errorf("op: %s, could not begin transaction: %w", op, err)
 	}
 
 	// getting all order_id's of this user (prepare)
@@ -138,17 +137,16 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 	builder := sq.Select("*").
 		From(OrderTable).
 		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"user_id": userID})
+		Where(sq.Eq{userIdColumn: userID}).
+		Where(sq.NotEq{orderStatusColumn: "canceled"})
 	query, args, err := builder.ToSql()
 	if err != nil {
-		return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+		return res, fmt.Errorf("op: %s, could not build query: %w", op, err)
 	}
 
-	//getOrderIDsByUserIDQuery := "SELECT * FROM orders WHERE user_id = $1"
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
-		log.Printf("error from operation: %s: %s", op, err.Error())
-		return res, err
+		return res, fmt.Errorf("op: %s, could not query rows: %w", op, err)
 	}
 	defer rows.Close()
 
@@ -156,76 +154,73 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 		var or models.Order
 		err := rows.Scan(&or.ID, &or.Time, &or.OrderStatus, &or.UserID, &or.PaymentMethod, &or.Cost)
 		if err != nil {
-			return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+			return res, fmt.Errorf("op: %s, could not scan row: %w", op, err)
 		}
 		intOrders = append(intOrders, or.ID)
 		Orders = append(Orders, or)
 	}
 	if err := rows.Err(); err != nil {
-		return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+		return res, fmt.Errorf("op: %s, could not iterate rows: %w", op, err)
 	}
 
 	// main loop
 	for i, orderId := range intOrders {
 		// cakes list creation
 		intCakes := make([]int, 0, 10)
-		builder := sq.Select("cake_id").
+		builder := sq.Select(cakeIdColumn).
 			From(OrdersCakesTable).
 			PlaceholderFormat(sq.Dollar).
-			Where(sq.Eq{"order_id": orderId})
+			Where(sq.Eq{orderIdColumn: orderId})
 		query, args, err := builder.ToSql()
 		if err != nil {
-			return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+			return res, fmt.Errorf("op: %s, could not build select query: %w", op, err)
 		}
 
-		//getCakeIDQuery := "SELECT cake_id FROM order_cakes WHERE order_id = $1"
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
-			log.Printf("error from operation: %s: %s", op, err.Error())
-			return res, err
+			return res, fmt.Errorf("op: %s, could not query row: %w", op, err)
 		}
 
 		for rows.Next() {
 			var id int
 			err := rows.Scan(&id)
 			if err != nil {
-				return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+				return res, fmt.Errorf("op: %s, could not scan row: %w", op, err)
 			}
 			intCakes = append(intCakes, id)
 		}
 		if err := rows.Err(); err != nil {
-			log.Printf("error from operation: %s: %s", op, err.Error())
-			return res, err
+			return res, fmt.Errorf("op: %s, could not iterate rows: %w", op, err)
 		}
 
 		// next station is cakes table!
 		cakes := make([]models.Cake, 0, 10)
 		for _, cakeID := range intCakes {
-			builder := sq.Select("id", "description", "price", "weight", "full_description", "active").
+			builder := sq.Select(idColumn, descriptionColumn, priceColumn, weightColumn, fullDescriptionColumn, activeColumn).
 				From(CakesTable).
 				PlaceholderFormat(sq.Dollar).
-				Where(sq.Eq{"active": true}).
-				Where(sq.Eq{"id": cakeID})
+				Where(sq.Eq{activeColumn: true}).
+				Where(sq.Eq{idColumn: cakeID})
 			query, args, err := builder.ToSql()
 			if err != nil {
-				return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+				return res, fmt.Errorf("op: %s, could not build select query: %w", op, err)
 			}
 
 			rows, err := tx.Query(ctx, query, args...)
 			if err != nil {
-				return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+				return res, fmt.Errorf("op: %s, could not query row: %w", op, err)
 			}
 
 			for rows.Next() {
 				var cake models.Cake
 				err := rows.Scan(&cake.ID, &cake.Description, &cake.Price, &cake.Weight, &cake.FullDescription, &cake.Active)
 				if err != nil {
-					return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+					return res, fmt.Errorf("op: %s, could not scan row: %w", op, err)
 				}
 				cakes = append(cakes, cake)
 			}
 			if err := rows.Err(); err != nil {
-				return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+				return res, fmt.Errorf("op: %s, could not iterate rows: %w", op, err)
 			}
 		}
 
@@ -238,7 +233,7 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return res, fmt.Errorf("error from operation: %s: %s", op, err.Error())
+		return res, fmt.Errorf("op: %s, could not commit transaction: %w", op, err)
 	}
 
 	return res, nil
@@ -250,84 +245,51 @@ func (o *UserOrderManagerPostgres) DeleteOrder(userID, orderID int) error {
 	ctx := context.Background()
 	tx, err := o.db.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("op: %s: could not begin transaction: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not begin transaction: %w", op, err)
 	}
 
 	// validation:
-	query, args, err := sq.Select("user_id").
+	query, args, err := sq.Select(userIdColumn).
 		From(OrderTable).
 		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"id": orderID}).
-		Where(sq.Eq{"user_id": userID}).
+		Where(sq.Eq{idColumn: orderID}).
+		Where(sq.Eq{userIdColumn: userID}).
 		ToSql()
 	if err != nil {
-		return fmt.Errorf("can't exec: %s: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not build query: %w", op, err)
 	}
 
 	res, err := tx.Exec(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("can't exec: %s: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not query row: %w", op, err)
 	}
 
 	rowsAffected := res.RowsAffected()
 	if rowsAffected == 0 {
-		return fmt.Errorf("can't find user's order: %s: %s", op, "no rows affected")
+		return fmt.Errorf("op: %s, no rows affected: %w", op, err)
 	}
 
-	query, args, err = sq.Delete(OrdersCakesTable).
+	query, args, err = sq.Update(OrderTable).
 		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"order_id": orderID}).
+		Set(orderStatusColumn, "canceled").
+		Where(sq.Eq{idColumn: orderID}).
+		Where(sq.Eq{userIdColumn: userID}).
 		ToSql()
 	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
-	}
-
-	res, err = tx.Exec(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
-	}
-
-	rowsAffected = res.RowsAffected()
-	if rowsAffected == 0 {
-		return fmt.Errorf("op: %s: %s", op, "could not delete order")
-	}
-
-	query, args, err = sq.Delete(DeliveryTable).
-		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"id": orderID}).
-		ToSql()
-	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
-	}
-
-	res, err = tx.Exec(ctx, query, args...)
-	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
-	}
-	rowsAffected = res.RowsAffected()
-	if rowsAffected == 0 {
-		return fmt.Errorf("op: %s: %s", op, "could not delete order")
-	}
-
-	query, args, err = sq.Delete(OrderTable).
-		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"id": orderID}).
-		ToSql()
-	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not build update query: %w", op, err)
 	}
 	res, err = tx.Exec(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not query row: %w", op, err)
 	}
 	rowsAffected = res.RowsAffected()
 	if rowsAffected == 0 {
-		return fmt.Errorf("op: %s: %s", op, "could not delete order")
+		return fmt.Errorf("op: %s, no rows affected: %w", op, err)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return fmt.Errorf("op: %s: could not commit transaction: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not commit transaction: %w", op, err)
 	}
 
 	return nil
@@ -338,68 +300,69 @@ func (o *UserOrderManagerPostgres) UpdateOrder(userID int, orderID int, paymentM
 	ctx := context.Background()
 	tx, err := o.db.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("op: %s: could not begin transaction: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not begin transaction: %w", op, err)
 	}
 
 	query, args, err := sq.Update(OrderTable).
 		PlaceholderFormat(sq.Dollar).
-		Set("payment_method", paymentMethod).
-		Where(sq.Eq{"id": orderID}).
-		Where(sq.Eq{"user_id": userID}).
+		Set(paymentMethodColumn, paymentMethod).
+		Where(sq.Eq{idColumn: orderID}).
+		Where(sq.Eq{userIdColumn: userID}).
 		ToSql()
 	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not build update query: %w", op, err)
 	}
 	res, err := tx.Exec(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not query row: %w", op, err)
 	}
 	if res.RowsAffected() == 0 {
-		return fmt.Errorf("op: %s: %s", op, "no rows updated")
+		return fmt.Errorf("op: %s, no rows affected: %w", op, err)
 	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		return fmt.Errorf("op: %s: %s", op, err.Error())
+		return fmt.Errorf("op: %s, could not commit transaction: %w", op, err)
 	}
 	return nil
 }
 
 func (o *UserOrderManagerPostgres) GetDeliveryPoints() ([]models.DeliveryPoint, error) {
 	const op = "pgsql.GetDeliveryPoints"
+
 	points := make([]models.DeliveryPoint, 0, 10)
 	ctx := context.Background()
 	tx, err := o.db.pool.Begin(ctx)
 	if err != nil {
-		return points, fmt.Errorf("op: %s: could not begin transaction: %s", op, err.Error())
+		return points, fmt.Errorf("op: %s, could not begin transaction: %w", op, err)
 	}
 
-	qeury, args, err := sq.Select("id", "rating", "address", "working_hours", "contact_phone").
+	qeury, args, err := sq.Select(idColumn, ratingColumn, addressColumn, workingHoursColumn, contactPhoneColumn).
 		From(DeliveryPointTable).
 		PlaceholderFormat(sq.Dollar).
 		ToSql()
 	if err != nil {
-		return points, fmt.Errorf("op: %s: %s", op, err.Error())
+		return points, fmt.Errorf("op: %s, could not build query: %w", op, err)
 	}
 	res, err := tx.Query(ctx, qeury, args...)
 	if err != nil {
-		return points, fmt.Errorf("op: %s: %s", op, err.Error())
+		return points, fmt.Errorf("op: %s, could not query row: %w", op, err)
 	}
 
 	for res.Next() {
 		var point models.DeliveryPoint
 		err := res.Scan(&point.ID, &point.Rating, &point.Address, &point.WorkingHours, &point.ContactPhone)
 		if err != nil {
-			return points, fmt.Errorf("op: %s: %s", op, err.Error())
+			return points, fmt.Errorf("op: %s, could not scan row: %w", op, err)
 		}
 		points = append(points, point)
 	}
 	if err := res.Err(); err != nil {
-		return points, fmt.Errorf("op: %s: %s", op, err.Error())
+		return points, fmt.Errorf("op: %s, could not iterate rows: %w", op, err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return points, fmt.Errorf("op: %s: could not commit transaction: %s", op, err.Error())
+		return points, fmt.Errorf("op: %s, could not commit transaction: %w", op, err)
 	}
 
 	return points, nil
