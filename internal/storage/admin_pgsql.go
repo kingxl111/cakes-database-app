@@ -24,22 +24,23 @@ func NewAdminAuthPostgres(db *DB) *AdminAuthPostgres {
 }
 
 func (a *AdminAuthPostgres) GetAdmin(username, passwordHash string) (int, error) {
+	const op = "pgsql.GetAdmin"
 	var id int
-	//log.Println("password_hash: " + passwordHash)
-	builderSelect := sq.Select("id").
+
+	builderSelect := sq.Select(idColumn).
 		From(AdminTable).
 		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"username": username}).
-		Where(sq.Eq{"password_hash": passwordHash})
+		Where(sq.Eq{usernameColumn: username}).
+		Where(sq.Eq{passwordColumn: passwordHash})
 
 	query, args, err := builderSelect.ToSql()
 	if err != nil {
-		return id, fmt.Errorf("error building query: %v", err.Error())
+		return id, fmt.Errorf("op: %s, error building select query: %w", op, err)
 	}
-	log.Println(args...)
+
 	err = a.db.pool.QueryRow(context.Background(), query, args...).Scan(&id)
 	if err != nil {
-		return id, err
+		return id, fmt.Errorf("op: %s, error executing select query: %w", op, err)
 	}
 	return id, nil
 }
@@ -55,45 +56,50 @@ func NewAdminPostgres(db *DB) *AdminPostgres {
 }
 
 func (a *AdminPostgres) GetUsers() ([]models.User, error) {
+	const op = "pgsql.GetUsers"
 	users := make([]models.User, 0, 10)
 
-	builderSelect := sq.Select("id", "fullname", "username", "email", "phone_number").
+	builderSelect := sq.Select(idColumn, fullnameColumn, usernameColumn, emailColumn, phoneColumn).
 		From(UserTable).
 		PlaceholderFormat(sq.Dollar)
 
 	query, args, err := builderSelect.ToSql()
 	if err != nil {
-		return users, fmt.Errorf("error building query: %v", err.Error())
+		return users, fmt.Errorf("op: %s, error building select query: %w", op, err)
 	}
 
 	rows, err := a.db.pool.Query(context.Background(), query, args...)
 	if err != nil {
-		return users, err
+		return users, fmt.Errorf("op: %s, error executing select query: %w", op, err)
 	}
 	for rows.Next() {
 		var usr models.User
 		err = rows.Scan(&usr.ID, &usr.FullName, &usr.Username, &usr.Email, &usr.PhoneNumber)
 		if err != nil {
-			return users, err
+			return users, fmt.Errorf("op: %s, error scanning row: %w", op, err)
 		}
 		users = append(users, usr)
 	}
 	if err := rows.Err(); err != nil {
-		return users, err
+		return users, fmt.Errorf("op: %s, error scanning rows: %w", op, err)
 	}
 
 	return users, nil
 }
 
 func (db *DB) backupTable(tableName string) error {
-	query, args, err := sq.Select("*").From(tableName).ToSql()
+	const op = "pgsql.BackupTable"
+
+	query, args, err := sq.Select("*").
+		From(tableName).
+		ToSql()
 	if err != nil {
-		return fmt.Errorf("error building query: %w", err)
+		return fmt.Errorf("op: %s, error building query: %w", op, err)
 	}
 
 	rows, err := db.pool.Query(context.Background(), query, args...)
 	if err != nil {
-		return fmt.Errorf("error executing query: %w", err)
+		return fmt.Errorf("op: %s, error executing query: %w", op, err)
 	}
 	defer rows.Close()
 
@@ -105,7 +111,7 @@ func (db *DB) backupTable(tableName string) error {
 
 	file, err := os.Create(fmt.Sprintf("%s_backup.csv", tableName))
 	if err != nil {
-		return fmt.Errorf("error creating file: %w", err)
+		return fmt.Errorf("op: %s, error opening file: %w", op, err)
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
@@ -117,7 +123,7 @@ func (db *DB) backupTable(tableName string) error {
 	defer writer.Flush()
 
 	if err := writer.Write(columns); err != nil {
-		return fmt.Errorf("error writing column names: %w", err)
+		return fmt.Errorf("op: %s, error writing csv: %w", op, err)
 	}
 
 	// using interface{} for universal data retrieve
@@ -128,7 +134,7 @@ func (db *DB) backupTable(tableName string) error {
 
 	for rows.Next() {
 		if err := rows.Scan(values...); err != nil {
-			return fmt.Errorf("error retrieving data: %w", err)
+			return fmt.Errorf("op: %s, error scanning row: %w", op, err)
 		}
 
 		record := make([]string, len(columns))
@@ -146,21 +152,23 @@ func (db *DB) backupTable(tableName string) error {
 		}
 
 		if err := writer.Write(record); err != nil {
-			return fmt.Errorf("error writing row to file: %w", err)
+			return fmt.Errorf("op: %s, error writing csv: %w", op, err)
 		}
 	}
 
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("error iterating rows: %w", err)
+		return fmt.Errorf("op: %s, error scanning rows: %w", op, err)
 	}
 	return nil
 }
 
 func (a *AdminPostgres) Backup() error {
+	const op = "pgsql.Backup"
+
 	ctx := context.Background()
 	tx, err := a.db.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return fmt.Errorf("op: %s, failed to begin transaction: %w", op, err)
 	}
 	tables := []string{
 		UserTable,
@@ -174,21 +182,23 @@ func (a *AdminPostgres) Backup() error {
 
 	for _, table := range tables {
 		if err := a.db.backupTable(table); err != nil {
-			return fmt.Errorf("error backing up table %s: %v", table, err)
+			return fmt.Errorf("op: %s, failed to backup table: %w", op, err)
 		}
 	}
 
 	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return fmt.Errorf("op: %s, failed to commit transaction: %w", op, err)
 	}
 
 	return nil
 }
 
 func (db *DB) restoreTable(tableName string) error {
+	const op = "pgsql.RestoreTable"
+
 	file, err := os.Open(fmt.Sprintf("%s_backup.csv", tableName))
 	if err != nil {
-		return fmt.Errorf("error opening backup file: %w", err)
+		return fmt.Errorf("op: %s, error opening backup file: %w", op, err)
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
@@ -203,7 +213,7 @@ func (db *DB) restoreTable(tableName string) error {
 	}
 
 	if len(records) == 0 {
-		return fmt.Errorf("no records found in backup for table %s", tableName)
+		return fmt.Errorf("op: %s, error no records found, tableName: %s", op, tableName)
 	}
 
 	columns := records[0]
@@ -220,7 +230,7 @@ func (db *DB) restoreTable(tableName string) error {
 
 	for _, record := range records[1:] {
 		if len(record) != len(columns) {
-			return fmt.Errorf("record length does not match column length for table %s", tableName)
+			return fmt.Errorf("op: %s, error row has %d columns, expected %d", op, len(columns), len(record))
 		}
 
 		args := make([]interface{}, len(record))
@@ -230,7 +240,7 @@ func (db *DB) restoreTable(tableName string) error {
 
 		_, err := db.pool.Exec(context.Background(), query, args...)
 		if err != nil {
-			return fmt.Errorf("error inserting record into table %s: %w", tableName, err)
+			return fmt.Errorf("op: %s, error executing row: %w", op, err)
 		}
 	}
 
@@ -238,10 +248,11 @@ func (db *DB) restoreTable(tableName string) error {
 }
 
 func (a *AdminPostgres) Restore() error {
+	const op = "pgsql.Restore"
 	ctx := context.Background()
 	tx, err := a.db.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
+		return fmt.Errorf("op: %s, failed to begin transaction: %w", op, err)
 	}
 	tables := []string{
 		UserTable,
@@ -255,28 +266,28 @@ func (a *AdminPostgres) Restore() error {
 
 	for _, table := range tables {
 		if err := a.db.restoreTable(table); err != nil {
-			return fmt.Errorf("error restoring table %s: %v", table, err)
+			return fmt.Errorf("op: %s, error restoring table: %w", op, err)
 		}
 	}
 	if err = tx.Commit(ctx); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return fmt.Errorf("op: %s, failed to commit transaction: %w", op, err)
 	}
 
 	return nil
 }
 
 func (a *AdminPostgres) AddCake(ctx context.Context, cake models.Cake) (int, error) {
-	const op = "storage.AddCake"
+	const op = "pgsql.AddCake"
 	var id int
 	builder := sq.Insert(CakesTable).
 		PlaceholderFormat(sq.Dollar).
-		Columns("description", "price", "weight", "full_description", "active").
+		Columns(descriptionColumn, priceColumn, weightColumn, fullDescriptionColumn, activeColumn).
 		Values(cake.Description, cake.Price, cake.Weight, cake.FullDescription, true).
 		Suffix("RETURNING id")
 
 	query, args, err := builder.ToSql()
 	if err != nil {
-		return id, fmt.Errorf("error building query: %s, %s", op, err)
+		return id, fmt.Errorf("op: %s, error building query: %w", op, err)
 	}
 	err = a.db.pool.QueryRow(ctx, query, args...).Scan(&id)
 	if err != nil {
@@ -287,20 +298,20 @@ func (a *AdminPostgres) AddCake(ctx context.Context, cake models.Cake) (int, err
 }
 
 func (a *AdminPostgres) RemoveCake(ctx context.Context, id int) error {
-	const op = "storage.RemoveCake"
+	const op = "pgsql.RemoveCake"
 
 	builder := sq.Update(CakesTable).
-		Set("active", false).
+		Set(activeColumn, false).
 		PlaceholderFormat(sq.Dollar).
-		Where(sq.Eq{"id": id})
+		Where(sq.Eq{idColumn: id})
 	query, args, err := builder.ToSql()
 	if err != nil {
-		return fmt.Errorf("error building query: %s, %s", op, err)
+		return fmt.Errorf("op: %s, error building query: %w", op, err)
 	}
 
 	_, err = a.db.pool.Exec(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("error executing query: %w", err)
+		return fmt.Errorf("op: %s, error executing query: %w", op, err)
 	}
 
 	return nil
