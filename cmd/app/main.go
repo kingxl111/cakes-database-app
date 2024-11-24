@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/kingxl111/cakes-database-app/internal/storage/s3"
+
 	"github.com/kingxl111/cakes-database-app/internal/logging"
 
 	"time"
@@ -50,9 +52,20 @@ func main() {
 	}
 	defer db.Close()
 
+	s3cl, err := s3.NewS3Client(
+		cfg.S3.Endpoint,
+		cfg.S3.AccessKey,
+		cfg.S3.SecretKey,
+		cfg.S3.Bucket,
+		cfg.S3.Region,
+		cfg.S3.PublicUrl)
+	if err != nil {
+		log.Fatalf("failed to connect to s3 client: %s", err)
+	}
+
 	// all layers
 	st := storage.NewStorage(db)
-	services := service.NewService(st)
+	services := service.NewService(st, s3cl)
 	router := server.NewHandler(services)
 
 	// run server
