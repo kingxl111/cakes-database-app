@@ -12,6 +12,7 @@ type Config struct {
 	Env        string     `yaml:"env" env-default:"local"`
 	HTTPServer HTTPServer `yaml:"http_server"`
 	DB         DB         `yaml:"db"`
+	S3         S3         `yaml:"s3_config"`
 }
 
 // HTTPServer type
@@ -31,6 +32,15 @@ type DB struct {
 	SSLmode  string `yaml:"sslmode"`
 }
 
+type S3 struct {
+	Endpoint  string
+	Bucket    string
+	AccessKey string
+	SecretKey string
+	Region    string
+	PublicUrl string
+}
+
 const (
 	user     = "DB_USER"
 	password = "DB_PASSWORD"
@@ -38,6 +48,13 @@ const (
 	host     = "DB_HOST"
 	port     = "DB_PORT"
 	sslmode  = "disable"
+
+	s3Endpoint  = "S3_ENDPOINT"
+	s3Bucket    = "S3_BUCKET"
+	s3AccessKey = "S3_ACCESS_KEY"
+	s3SecretKey = "S3_SECRET_KEY"
+	s3Region    = "S3_REGION"
+	s3PublicURL = "PUBLIC_S3_URL"
 )
 
 func MustLoad() *Config {
@@ -63,6 +80,13 @@ func MustLoad() *Config {
 	cfg.DB.Host = os.Getenv(host)
 	cfg.DB.Port = os.Getenv(port)
 	cfg.DB.SSLmode = sslmode
+
+	cfg.S3.Endpoint = os.Getenv(s3Endpoint)
+	cfg.S3.AccessKey = os.Getenv(s3AccessKey)
+	cfg.S3.SecretKey = os.Getenv(s3SecretKey)
+	cfg.S3.Region = os.Getenv(s3Region)
+	cfg.S3.Bucket = os.Getenv(s3Bucket)
+	cfg.S3.PublicUrl = os.Getenv(s3PublicURL)
 
 	return &cfg
 }

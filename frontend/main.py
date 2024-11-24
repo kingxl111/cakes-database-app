@@ -289,7 +289,6 @@ def orders_page():
         st.warning("Ошибка загрузки заказов")
 
 
-# Страница для оформления нового заказа
 def create_order_page():
     st.title("Сделать заказ")
 
@@ -298,12 +297,24 @@ def create_order_page():
     if cakes_response.status_code == 200:
         cakes = cakes_response.json()
         selected_cakes = []
-        st.subheader("Выберите торты для заказа")
 
-        # Выбираем торты через чекбоксы
+        st.subheader("Выберите торты и количество")
         for cake in cakes:
-            if st.checkbox(f"{cake['description']} - {cake['price']} $.", key=cake['id']):
-                selected_cakes.append(cake)
+            # Отображение информации о торте
+            st.markdown(f"**{cake['description']}**")
+            st.text(f"Цена: {cake['price']} $ | Вес: {cake['weight']} г")
+
+            # Поле для выбора количества
+            quantity = st.number_input(
+                f"Количество {cake['description']}",
+                min_value=0,
+                max_value=100,
+                step=1,
+                key=f"quantity_{cake['id']}"
+            )
+            if quantity > 0:
+                for _ in range(quantity):
+                    selected_cakes.append({"cake": cake, "quantity": 1})
 
         if not selected_cakes:
             st.warning("Пожалуйста, выберите хотя бы один торт для заказа.")
@@ -325,18 +336,28 @@ def create_order_page():
     payment_method = st.radio("Выберите способ оплаты", ["Card", "Cash", "Online Payment"])
 
     if st.button("Оформить заказ"):
-        selected_cake_ids = [cake['id'] for cake in selected_cakes]
+        # Считаем общую стоимость и вес
+        total_cost = sum(cake['cake']['price'] * cake['quantity'] for cake in selected_cakes)
+        total_weight = sum(cake['cake']['weight'] * cake['quantity'] for cake in selected_cakes)
+
+        # Формируем данные для заказа
+        selected_cake_items = [
+            {"id": cake["cake"]["id"], "description": cake["cake"]["description"],
+             "price": cake["cake"]["price"], "weight": cake["cake"]["weight"],
+             "quantity": cake["quantity"]}
+            for cake in selected_cakes
+        ]
         delivery_point_id = next(point['id'] for point in delivery_points if point['address'] == delivery_point)
 
         order_data = {
             "user_id": 3,  # Нужно заменить на динамический ID пользователя
             "delivery": {
                 "point_id": delivery_point_id,
-                "cost": sum(cake['price'] for cake in selected_cakes),
+                "cost": total_cost,
                 "status": "pending",
-                "weight": sum(cake['weight'] for cake in selected_cakes),
+                "weight": total_weight,
             },
-            "cakes": [{"id": cake["id"], "description": cake["description"], "price": cake["price"], "weight": cake["weight"]} for cake in selected_cakes],
+            "cakes": selected_cake_items,
             "payment_method": payment_method
         }
 
@@ -353,17 +374,23 @@ def catalog_page():
     if response.status_code == 200:
         cakes = response.json()
 
-        # Создаем колонки для отображения тортов
         cols = st.columns(4)
 
         for i, cake in enumerate(cakes):
-            # Определяем колонку для текущего торта
             col = cols[i % 4]
             with col:
-                # Отображаем изображение торта
-                st.image(
-                    cake.get('image_url', "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"),
-                    use_container_width=True
+                image_url = cake.get('image_url')
+                if not image_url:
+                    print("image_url is incorrect:", image_url)
+                    image_url = "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"
+
+                st.markdown(
+                    f"""
+                    <div style="margin-bottom: 20px; padding: 10px; border-radius: 5px;">
+                        <img src="{image_url}" style="width: 100%; height: auto;" />
+                    </div>
+                    """,
+                    unsafe_allow_html=True
                 )
                 if st.button(cake["description"], key=cake["id"]):
                     st.session_state["current_cake_id"] = cake["id"]
@@ -380,11 +407,12 @@ def cake_detail_page(cake_id):
     if response.status_code == 200:
         cake = response.json()
 
-        # Отображение информации о торте
-        st.image(
-            cake.get('image_url', "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"),
-            use_container_width=True
-        )
+        image_url = cake.get('image_url')
+        if not image_url:
+            print("image_url is incorrect:", image_url)
+            image_url = "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"
+
+        st.image(image_url, use_container_width=True)
         st.subheader(cake["description"])
         st.text(f"Цена: {cake['price']} $")
         st.text(f"Вес: {cake['weight']} г")
