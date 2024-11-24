@@ -374,29 +374,71 @@ def catalog_page():
     if response.status_code == 200:
         cakes = response.json()
 
-        cols = st.columns(4)
+        st.markdown(
+            """
+            <style>
+                .cake-card {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: space-between;
+                    border: 1px solid #ddd;
+                    border-radius: 10px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                }
+                .cake-image {
+                    width: 120px;
+                    height: 120px;
+                    object-fit: cover;
+                    border-radius: 10px;
+                    margin-right: 15px;
+                }
+                .cake-info {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                }
+                .cake-price {
+                    font-weight: bold;
+                    margin-top: 10px;
+                }
+                .cake-actions {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
-        for i, cake in enumerate(cakes):
-            col = cols[i % 4]
-            with col:
-                image_url = cake.get('image_url')
-                if not image_url:
-                    print("image_url is incorrect:", image_url)
-                    image_url = "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"
+        for cake in cakes:
+            image_url = cake.get('image_url')
+            if not image_url:
+                print("image_url is incorrect:", image_url)
+                image_url = "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"
 
-                st.markdown(
-                    f"""
-                    <div style="margin-bottom: 20px; padding: 10px; border-radius: 5px;">
-                        <img src="{image_url}" style="width: 100%; height: auto;" />
+            st.markdown(
+                f"""
+                <div class="cake-card">
+                    <img src="{image_url}" class="cake-image" />
+                    <div class="cake-info">
+                        <h4>{cake["description"]}</h4>
+                        <p class="cake-price">Цена: {cake['price']} $</p>
                     </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-                if st.button(cake["description"], key=cake["id"]):
-                    st.session_state["current_cake_id"] = cake["id"]
-                    st.session_state["current_page"] = "cake_detail"
-                    st.rerun()
-                st.text(f"Цена: {cake['price']} $")
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            # Добавляем кнопку выбора с обработкой состояния
+            if st.button(f"Выбрать {cake['description']}", key=cake["id"]):
+                st.session_state["current_cake_id"] = cake["id"]
+                st.session_state["current_page"] = "cake_detail"
+                st.rerun()
     else:
         st.warning("Ошибка загрузки каталога")
 
