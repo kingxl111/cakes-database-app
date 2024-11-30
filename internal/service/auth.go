@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/kingxl111/cakes-database-app/internal/models"
 	"github.com/kingxl111/cakes-database-app/internal/storage"
@@ -38,7 +37,7 @@ func generatePasswordHash(password string) string {
 
 func (s *AuthService) CreateUser(user models.User) (int, error) {
 	user.PasswordHash = generatePasswordHash(user.PasswordHash)
-	log.Printf("hash: %s", user.PasswordHash)
+	//log.Printf("hash: %s", user.PasswordHash)
 	// other user's fields without changes
 	return s.stg.CreateUser(user)
 }

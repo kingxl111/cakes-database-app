@@ -13,7 +13,8 @@ CREATE TABLE cakes (
     price INT NOT NULL,
     weight INT NOT NULL,
     full_description TEXT NOT NULL,
-    active BOOLEAN DEFAULT TRUE
+    active BOOLEAN DEFAULT TRUE,
+    image_url TEXT
 );
 
 CREATE TABLE delivery_points (
