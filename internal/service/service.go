@@ -38,6 +38,7 @@ type CakeManager interface {
 }
 
 type AdminAuthorization interface {
+	AddAdmin(username, password string) (int, error)
 	GenerateAdminToken(username, password string) (string, error)
 	ParseAdminToken(accessToken string) (int, error)
 }

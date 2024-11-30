@@ -68,6 +68,20 @@ func main() {
 	services := service.NewService(st, s3cl)
 	router := server.NewHandler(services)
 
+	// for authorizer database role
+	authDB, err := storage.NewDB(
+		cfg.DB.AuthUsername,
+		cfg.DB.AuthPassword,
+		cfg.DB.Host,
+		cfg.DB.Port,
+		cfg.DB.DBName,
+		cfg.DB.SSLmode)
+	if err != nil {
+		log.Fatalf("failed to connect to database: %s", err)
+	}
+	// explicit
+	services.Authorization = service.NewAuthService(storage.NewStorage(authDB))
+
 	// run server
 	srv := &server.Server{}
 	log.Printf("server started on %s", cfg.HTTPServer.Address)
@@ -77,28 +91,3 @@ func main() {
 		return
 	}
 }
-
-//func SetupLogger(env string) *slog.Logger {
-//	var lg *slog.Logger
-//
-//	switch env {
-//	case envLocal:
-//		lg = slog.New(
-//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-//		)
-//	case envDev:
-//		lg = slog.New(
-//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-//		)
-//	case envProd:
-//		lg = slog.New(
-//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-//		)
-//	default: // If env config is invalid, set prod settings by default due to security
-//		lg = slog.New(
-//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-//		)
-//	}
-//
-//	return lg
-//}

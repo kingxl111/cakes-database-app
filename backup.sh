@@ -15,6 +15,8 @@ pg_dump -h "${PGHOST}" -U "${PGUSER}" -d "${PGDATABASE}" -F c > "${BACKUP_FILE}"
 
 if [ $? -eq 0 ]; then
   echo "Backup successful: ${BACKUP_FILE}"
+  find "/backups" -name "db_backup_*.sql" -type f -mmin +10 -exec echo rm {} \;
+  find "/backups" -name "db_backup_*.sql" -type f -mmin +10 -exec rm {} \;
 else
   echo "Backup failed!" >&2
   exit 1

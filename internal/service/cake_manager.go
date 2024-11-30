@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"mime/multipart"
 
-	"github.com/kingxl111/cakes-database-app/internal/storage/s3"
-	"github.com/sirupsen/logrus"
-
 	"github.com/kingxl111/cakes-database-app/internal/models"
 	"github.com/kingxl111/cakes-database-app/internal/storage"
+	"github.com/kingxl111/cakes-database-app/internal/storage/s3"
 )
 
 type CakeService struct {
@@ -32,7 +30,6 @@ func (c *CakeService) GetCakes() ([]models.Cake, error) {
 	for i, _ := range cakes {
 		imageUrl := c.serv.GetFileURL(cakes[i].Description)
 		cakes[i].ImageURL = imageUrl
-		logrus.Printf("cake: %s, image_url: %s\n", cakes[i].Description, cakes[i].ImageURL)
 	}
 	return cakes, err
 }

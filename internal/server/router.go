@@ -58,6 +58,7 @@ func (h *Handler) NewRouter(ctx *context.Context, log *logrus.Logger, env string
 	adminRouter.Route("/", func(r chi.Router) {
 
 		r.Post("/sign-in", h.AdminSignIn(ctx, log))
+		r.Post("/add-admin", h.AddAdmin(ctx, log))
 
 		admManagerRouter := chi.NewRouter()
 		admManagerRouter.Use(h.AdminIdentityMiddleware())

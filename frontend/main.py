@@ -1,3 +1,5 @@
+import http
+
 import streamlit as st
 import requests
 
@@ -70,6 +72,10 @@ def admin_sign_in(username, password):
     response = requests.post(f"{API_BASE_URL}/adm/sign-in", json={"username": username, "password": password})
     return response
 
+def admin_add(username, password):
+    response = requests.post(f"{API_BASE_URL}/adm/add-admin", json={"username": username, "password_hash": password})
+    return response
+
 def authorization_page():
     st.title("Авторизация")
     auth_action = st.radio("Выберите действие", ["Войти", "Войти как администратор", "Зарегистрироваться"])
@@ -122,12 +128,6 @@ def manage_users_page():
             st.text(f"Никнейм: {user['username']}")
             st.text(f"Телефон: {user['phone_number']}")
 
-            if st.button(f"Удалить пользователя {user['username']}", key=user['id']):
-                delete_response = api_request("POST", f"/adm/manage-users/delete-user/{user['id']}")
-                if delete_response.status_code == 200:
-                    st.success(f"Пользователь {user['username']} удален!")
-                else:
-                    st.error("Ошибка при удалении пользователя")
     else:
         st.error("Ошибка загрузки списка пользователей")
 
@@ -170,24 +170,38 @@ def manage_cakes_page():
                 st.error("Ошибка добавления торта")
 
 
-def database_management_page():
-    st.title("Управление базой данных")
+# def database_management_page():
+#     st.title("Управление базой данных")
+#
+#     # Бэкап базы данных
+#     if st.button("Создать бэкап базы данных"):
+#         backup_response = api_request("POST", "/adm/database/backup")
+#         if backup_response.status_code == 200:
+#             st.success("Бэкап успешно создан!")
+#         else:
+#             st.error("Ошибка создания бэкапа")
+#
+#     # Восстановление базы данных
+#     if st.button("Восстановить базу данных"):
+#         recovery_response = api_request("POST", "/adm/database/recovery")
+#         if recovery_response.status_code == 200:
+#             st.success("База данных успешно восстановлена!")
+#         else:
+#             st.error("Ошибка восстановления базы данных")
 
-    # Бэкап базы данных
-    if st.button("Создать бэкап базы данных"):
-        backup_response = api_request("POST", "/adm/database/backup")
-        if backup_response.status_code == 200:
-            st.success("Бэкап успешно создан!")
-        else:
-            st.error("Ошибка создания бэкапа")
+def add_admin_page():
+    st.title("Добавление нового администратора ")
 
-    # Восстановление базы данных
-    if st.button("Восстановить базу данных"):
-        recovery_response = api_request("POST", "/adm/database/recovery")
-        if recovery_response.status_code == 200:
-            st.success("База данных успешно восстановлена!")
+    username = st.text_input("Никнейм")
+    password = st.text_input("Пароль", type="password")
+
+    if st.button("Зарегистрировать админа"):
+        response = admin_add(username, password)
+        if response.status_code == http.HTTPStatus.OK:
+            st.success("Новый администратор успешно добавлен!")
         else:
-            st.error("Ошибка восстановления базы данных")
+            st.error("Ошибка при добавлении нового администратора")
+
 
 def main():
     st.sidebar.title("Меню")
@@ -195,13 +209,15 @@ def main():
     # Проверка наличия JWT токена и отображение соответствующего интерфейса
     if st.session_state["jwt_token"]:
         if st.session_state.get("role") == "admin":
-            menu = st.sidebar.radio("Навигация", ["Управление пользователями", "Управление тортами", "Управление базой данных", "Выйти"])
+            menu = st.sidebar.radio("Навигация", ["Управление пользователями", "Управление тортами", "Добавить администратора", "Выйти"])
             if menu == "Управление пользователями":
                 manage_users_page()
             elif menu == "Управление тортами":
                 manage_cakes_page()
-            elif menu == "Управление базой данных":
-                database_management_page()
+            # elif menu == "Управление базой данных":
+            #     database_management_page()
+            elif menu == "Добавить администратора":
+                add_admin_page()
             elif menu == "Выйти":
                 st.session_state["jwt_token"] = None
                 st.session_state["role"] = None

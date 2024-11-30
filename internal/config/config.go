@@ -24,12 +24,14 @@ type HTTPServer struct {
 
 // DB type
 type DB struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	Host     string `yaml:"host"`
-	Port     string `yaml:"port"`
-	DBName   string `yaml:"name"`
-	SSLmode  string `yaml:"sslmode"`
+	Username     string `yaml:"username"`
+	Password     string `yaml:"password"`
+	Host         string `yaml:"host"`
+	Port         string `yaml:"port"`
+	DBName       string `yaml:"name"`
+	SSLmode      string `yaml:"sslmode"`
+	AuthUsername string `yaml:"auth_username"`
+	AuthPassword string `yaml:"auth_password"`
 }
 
 type S3 struct {
@@ -42,6 +44,9 @@ type S3 struct {
 }
 
 const (
+	authUser = "AUTH_USER" // for authorizer role
+	authPass = "AUTH_PASS" //
+
 	user     = "DB_USER"
 	password = "DB_PASSWORD"
 	name     = "DB_NAME"
@@ -73,6 +78,9 @@ func MustLoad() *Config {
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
 		log.Fatalf("can't read config: %s", err)
 	}
+
+	cfg.DB.AuthUsername = os.Getenv(authUser)
+	cfg.DB.AuthPassword = os.Getenv(authPass)
 
 	cfg.DB.DBName = os.Getenv(name)
 	cfg.DB.Username = os.Getenv(user)
