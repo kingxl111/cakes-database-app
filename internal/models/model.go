@@ -80,7 +80,8 @@ type InternOrder struct {
 
 // GetOrdersResponse model
 type GetOrdersResponse struct {
-	Orders []InternOrder
+	Orders  []InternOrder
+	AvgCost float64
 }
 
 // MakeOrderRequest model

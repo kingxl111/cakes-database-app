@@ -231,6 +231,11 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 		res.Orders = append(res.Orders, ord)
 	}
 
+	query = "SELECT COALESCE(findAverageOrderCost($1), 0)"
+	err = tx.QueryRow(ctx, query, userID).Scan(&res.AvgCost)
+	if err != nil {
+		return res, fmt.Errorf("op: %s, could not select findAverageOrderCost: %w", op, err)
+	}
 	err = tx.Commit(ctx)
 	if err != nil {
 		return res, fmt.Errorf("op: %s, could not commit transaction: %w", op, err)

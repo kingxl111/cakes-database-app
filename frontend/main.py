@@ -259,10 +259,10 @@ def orders_page():
     if response.status_code == 200:
         try:
             orders_data = response.json()["Orders"]
+            order_avg_cost = response.json()["AvgCost"]
             if not orders_data:
                 st.text("Список заказов пока пуст! Купите уже что-нибудь :]")
                 return
-
             for order_data in orders_data:
                 order = order_data["Ord"]
                 cakes = order_data["Cakes"]
@@ -299,6 +299,7 @@ def orders_page():
                         st.warning(f"Заказ #{order['id']} отменен!")
                     else:
                         st.error("Ошибка отмены заказа")
+            st.text(f"Средняя стоимость заказов: {order_avg_cost} $")
         except KeyError:
             st.error("Ответ сервера не содержит ключа 'Orders' или неправильный формат данных.")
     else:
