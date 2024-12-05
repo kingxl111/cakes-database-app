@@ -10,6 +10,7 @@ type Cake struct {
 	Weight          int    `json:"weight"`
 	FullDescription string `json:"full_description"`
 	Active          bool   `json:"active"`
+	ImageURL        string `json:"image_url"`
 }
 
 // User model
@@ -79,7 +80,8 @@ type InternOrder struct {
 
 // GetOrdersResponse model
 type GetOrdersResponse struct {
-	Orders []InternOrder
+	Orders  []InternOrder
+	AvgCost float64
 }
 
 // MakeOrderRequest model

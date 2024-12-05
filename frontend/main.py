@@ -1,3 +1,5 @@
+import http
+
 import streamlit as st
 import requests
 
@@ -70,6 +72,10 @@ def admin_sign_in(username, password):
     response = requests.post(f"{API_BASE_URL}/adm/sign-in", json={"username": username, "password": password})
     return response
 
+def admin_add(username, password):
+    response = requests.post(f"{API_BASE_URL}/adm/add-admin", json={"username": username, "password_hash": password})
+    return response
+
 def authorization_page():
     st.title("Авторизация")
     auth_action = st.radio("Выберите действие", ["Войти", "Войти как администратор", "Зарегистрироваться"])
@@ -122,12 +128,6 @@ def manage_users_page():
             st.text(f"Никнейм: {user['username']}")
             st.text(f"Телефон: {user['phone_number']}")
 
-            if st.button(f"Удалить пользователя {user['username']}", key=user['id']):
-                delete_response = api_request("POST", f"/adm/manage-users/delete-user/{user['id']}")
-                if delete_response.status_code == 200:
-                    st.success(f"Пользователь {user['username']} удален!")
-                else:
-                    st.error("Ошибка при удалении пользователя")
     else:
         st.error("Ошибка загрузки списка пользователей")
 
@@ -170,24 +170,38 @@ def manage_cakes_page():
                 st.error("Ошибка добавления торта")
 
 
-def database_management_page():
-    st.title("Управление базой данных")
+# def database_management_page():
+#     st.title("Управление базой данных")
+#
+#     # Бэкап базы данных
+#     if st.button("Создать бэкап базы данных"):
+#         backup_response = api_request("POST", "/adm/database/backup")
+#         if backup_response.status_code == 200:
+#             st.success("Бэкап успешно создан!")
+#         else:
+#             st.error("Ошибка создания бэкапа")
+#
+#     # Восстановление базы данных
+#     if st.button("Восстановить базу данных"):
+#         recovery_response = api_request("POST", "/adm/database/recovery")
+#         if recovery_response.status_code == 200:
+#             st.success("База данных успешно восстановлена!")
+#         else:
+#             st.error("Ошибка восстановления базы данных")
 
-    # Бэкап базы данных
-    if st.button("Создать бэкап базы данных"):
-        backup_response = api_request("POST", "/adm/database/backup")
-        if backup_response.status_code == 200:
-            st.success("Бэкап успешно создан!")
-        else:
-            st.error("Ошибка создания бэкапа")
+def add_admin_page():
+    st.title("Добавление нового администратора ")
 
-    # Восстановление базы данных
-    if st.button("Восстановить базу данных"):
-        recovery_response = api_request("POST", "/adm/database/recovery")
-        if recovery_response.status_code == 200:
-            st.success("База данных успешно восстановлена!")
+    username = st.text_input("Никнейм")
+    password = st.text_input("Пароль", type="password")
+
+    if st.button("Зарегистрировать админа"):
+        response = admin_add(username, password)
+        if response.status_code == http.HTTPStatus.OK:
+            st.success("Новый администратор успешно добавлен!")
         else:
-            st.error("Ошибка восстановления базы данных")
+            st.error("Ошибка при добавлении нового администратора")
+
 
 def main():
     st.sidebar.title("Меню")
@@ -195,13 +209,15 @@ def main():
     # Проверка наличия JWT токена и отображение соответствующего интерфейса
     if st.session_state["jwt_token"]:
         if st.session_state.get("role") == "admin":
-            menu = st.sidebar.radio("Навигация", ["Управление пользователями", "Управление тортами", "Управление базой данных", "Выйти"])
+            menu = st.sidebar.radio("Навигация", ["Управление пользователями", "Управление тортами", "Добавить администратора", "Выйти"])
             if menu == "Управление пользователями":
                 manage_users_page()
             elif menu == "Управление тортами":
                 manage_cakes_page()
-            elif menu == "Управление базой данных":
-                database_management_page()
+            # elif menu == "Управление базой данных":
+            #     database_management_page()
+            elif menu == "Добавить администратора":
+                add_admin_page()
             elif menu == "Выйти":
                 st.session_state["jwt_token"] = None
                 st.session_state["role"] = None
@@ -243,10 +259,10 @@ def orders_page():
     if response.status_code == 200:
         try:
             orders_data = response.json()["Orders"]
+            order_avg_cost = response.json()["AvgCost"]
             if not orders_data:
                 st.text("Список заказов пока пуст! Купите уже что-нибудь :]")
                 return
-
             for order_data in orders_data:
                 order = order_data["Ord"]
                 cakes = order_data["Cakes"]
@@ -283,13 +299,13 @@ def orders_page():
                         st.warning(f"Заказ #{order['id']} отменен!")
                     else:
                         st.error("Ошибка отмены заказа")
+            st.text(f"Средняя стоимость заказов: {order_avg_cost} $")
         except KeyError:
             st.error("Ответ сервера не содержит ключа 'Orders' или неправильный формат данных.")
     else:
         st.warning("Ошибка загрузки заказов")
 
 
-# Страница для оформления нового заказа
 def create_order_page():
     st.title("Сделать заказ")
 
@@ -298,12 +314,24 @@ def create_order_page():
     if cakes_response.status_code == 200:
         cakes = cakes_response.json()
         selected_cakes = []
-        st.subheader("Выберите торты для заказа")
 
-        # Выбираем торты через чекбоксы
+        st.subheader("Выберите торты и количество")
         for cake in cakes:
-            if st.checkbox(f"{cake['description']} - {cake['price']} $.", key=cake['id']):
-                selected_cakes.append(cake)
+            # Отображение информации о торте
+            st.markdown(f"**{cake['description']}**")
+            st.text(f"Цена: {cake['price']} $ | Вес: {cake['weight']} г")
+
+            # Поле для выбора количества
+            quantity = st.number_input(
+                f"Количество {cake['description']}",
+                min_value=0,
+                max_value=100,
+                step=1,
+                key=f"quantity_{cake['id']}"
+            )
+            if quantity > 0:
+                for _ in range(quantity):
+                    selected_cakes.append({"cake": cake, "quantity": 1})
 
         if not selected_cakes:
             st.warning("Пожалуйста, выберите хотя бы один торт для заказа.")
@@ -325,18 +353,28 @@ def create_order_page():
     payment_method = st.radio("Выберите способ оплаты", ["Card", "Cash", "Online Payment"])
 
     if st.button("Оформить заказ"):
-        selected_cake_ids = [cake['id'] for cake in selected_cakes]
+        # Считаем общую стоимость и вес
+        total_cost = sum(cake['cake']['price'] * cake['quantity'] for cake in selected_cakes)
+        total_weight = sum(cake['cake']['weight'] * cake['quantity'] for cake in selected_cakes)
+
+        # Формируем данные для заказа
+        selected_cake_items = [
+            {"id": cake["cake"]["id"], "description": cake["cake"]["description"],
+             "price": cake["cake"]["price"], "weight": cake["cake"]["weight"],
+             "quantity": cake["quantity"]}
+            for cake in selected_cakes
+        ]
         delivery_point_id = next(point['id'] for point in delivery_points if point['address'] == delivery_point)
 
         order_data = {
             "user_id": 3,  # Нужно заменить на динамический ID пользователя
             "delivery": {
                 "point_id": delivery_point_id,
-                "cost": sum(cake['price'] for cake in selected_cakes),
+                "cost": total_cost,
                 "status": "pending",
-                "weight": sum(cake['weight'] for cake in selected_cakes),
+                "weight": total_weight,
             },
-            "cakes": [{"id": cake["id"], "description": cake["description"], "price": cake["price"], "weight": cake["weight"]} for cake in selected_cakes],
+            "cakes": selected_cake_items,
             "payment_method": payment_method
         }
 
@@ -353,23 +391,71 @@ def catalog_page():
     if response.status_code == 200:
         cakes = response.json()
 
-        # Создаем колонки для отображения тортов
-        cols = st.columns(4)
+        st.markdown(
+            """
+            <style>
+                .cake-card {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: space-between;
+                    border: 1px solid #ddd;
+                    border-radius: 10px;
+                    padding: 15px;
+                    margin-bottom: 20px;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                }
+                .cake-image {
+                    width: 120px;
+                    height: 120px;
+                    object-fit: cover;
+                    border-radius: 10px;
+                    margin-right: 15px;
+                }
+                .cake-info {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                }
+                .cake-price {
+                    font-weight: bold;
+                    margin-top: 10px;
+                }
+                .cake-actions {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
 
-        for i, cake in enumerate(cakes):
-            # Определяем колонку для текущего торта
-            col = cols[i % 4]
-            with col:
-                # Отображаем изображение торта
-                st.image(
-                    cake.get('image_url', "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"),
-                    use_container_width=True
-                )
-                if st.button(cake["description"], key=cake["id"]):
-                    st.session_state["current_cake_id"] = cake["id"]
-                    st.session_state["current_page"] = "cake_detail"
-                    st.rerun()
-                st.text(f"Цена: {cake['price']} $")
+        for cake in cakes:
+            image_url = cake.get('image_url')
+            if not image_url:
+                print("image_url is incorrect:", image_url)
+                image_url = "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"
+
+            st.markdown(
+                f"""
+                <div class="cake-card">
+                    <img src="{image_url}" class="cake-image" />
+                    <div class="cake-info">
+                        <h4>{cake["description"]}</h4>
+                        <p class="cake-price">Цена: {cake['price']} $</p>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            # Добавляем кнопку выбора с обработкой состояния
+            if st.button(f"Выбрать {cake['description']}", key=cake["id"]):
+                st.session_state["current_cake_id"] = cake["id"]
+                st.session_state["current_page"] = "cake_detail"
+                st.rerun()
     else:
         st.warning("Ошибка загрузки каталога")
 
@@ -380,11 +466,12 @@ def cake_detail_page(cake_id):
     if response.status_code == 200:
         cake = response.json()
 
-        # Отображение информации о торте
-        st.image(
-            cake.get('image_url', "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"),
-            use_container_width=True
-        )
+        image_url = cake.get('image_url')
+        if not image_url:
+            print("image_url is incorrect:", image_url)
+            image_url = "https://img.freepik.com/free-photo/chocolate-cake-with-blueberry-cream_140725-10903.jpg"
+
+        st.image(image_url, use_container_width=True)
         st.subheader(cake["description"])
         st.text(f"Цена: {cake['price']} $")
         st.text(f"Вес: {cake['weight']} г")

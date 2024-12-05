@@ -4,6 +4,8 @@ import (
 	"context"
 	"log"
 
+	"github.com/kingxl111/cakes-database-app/internal/storage/s3"
+
 	"github.com/kingxl111/cakes-database-app/internal/logging"
 
 	"time"
@@ -50,10 +52,35 @@ func main() {
 	}
 	defer db.Close()
 
+	s3cl, err := s3.NewS3Client(
+		cfg.S3.Endpoint,
+		cfg.S3.AccessKey,
+		cfg.S3.SecretKey,
+		cfg.S3.Bucket,
+		cfg.S3.Region,
+		cfg.S3.PublicUrl)
+	if err != nil {
+		log.Fatalf("failed to connect to s3 client: %s", err)
+	}
+
 	// all layers
 	st := storage.NewStorage(db)
-	services := service.NewService(st)
+	services := service.NewService(st, s3cl)
 	router := server.NewHandler(services)
+
+	// for authorizer database role
+	authDB, err := storage.NewDB(
+		cfg.DB.AuthUsername,
+		cfg.DB.AuthPassword,
+		cfg.DB.Host,
+		cfg.DB.Port,
+		cfg.DB.DBName,
+		cfg.DB.SSLmode)
+	if err != nil {
+		log.Fatalf("failed to connect to database: %s", err)
+	}
+	// explicit
+	services.Authorization = service.NewAuthService(storage.NewStorage(authDB))
 
 	// run server
 	srv := &server.Server{}
@@ -64,28 +91,3 @@ func main() {
 		return
 	}
 }
-
-//func SetupLogger(env string) *slog.Logger {
-//	var lg *slog.Logger
-//
-//	switch env {
-//	case envLocal:
-//		lg = slog.New(
-//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-//		)
-//	case envDev:
-//		lg = slog.New(
-//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-//		)
-//	case envProd:
-//		lg = slog.New(
-//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-//		)
-//	default: // If env config is invalid, set prod settings by default due to security
-//		lg = slog.New(
-//			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-//		)
-//	}
-//
-//	return lg
-//}

@@ -23,6 +23,28 @@ func NewAdminAuthPostgres(db *DB) *AdminAuthPostgres {
 	return &AdminAuthPostgres{db: db}
 }
 
+func (a *AdminAuthPostgres) AddAdmin(username, passwordHash string) (int, error) {
+	const op = "pgsql.AddAdmin"
+	var id int
+	builder := sq.Insert(AdminTable).
+		PlaceholderFormat(sq.Dollar).
+		Columns(usernameColumn, passwordColumn).
+		Values(username, passwordHash).
+		Suffix("RETURNING id")
+
+	query, args, err := builder.ToSql()
+	if err != nil {
+		return id, fmt.Errorf("%s: %w", op, err)
+	}
+
+	err = a.db.pool.QueryRow(context.Background(), query, args...).Scan(&id)
+	if err != nil {
+		return id, fmt.Errorf("op: %s, failed to execute query: %w", op, err)
+	}
+
+	return id, nil
+}
+
 func (a *AdminAuthPostgres) GetAdmin(username, passwordHash string) (int, error) {
 	const op = "pgsql.GetAdmin"
 	var id int

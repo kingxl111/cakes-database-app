@@ -231,6 +231,11 @@ func (o *UserOrderManagerPostgres) GetOrders(userID int) (models.GetOrdersRespon
 		res.Orders = append(res.Orders, ord)
 	}
 
+	query = "SELECT COALESCE(findAverageOrderCost($1), 0)"
+	err = tx.QueryRow(ctx, query, userID).Scan(&res.AvgCost)
+	if err != nil {
+		return res, fmt.Errorf("op: %s, could not select findAverageOrderCost: %w", op, err)
+	}
 	err = tx.Commit(ctx)
 	if err != nil {
 		return res, fmt.Errorf("op: %s, could not commit transaction: %w", op, err)
@@ -285,6 +290,19 @@ func (o *UserOrderManagerPostgres) DeleteOrder(userID, orderID int) error {
 	rowsAffected = res.RowsAffected()
 	if rowsAffected == 0 {
 		return fmt.Errorf("op: %s, no rows affected: %w", op, err)
+	}
+
+	query, args, err = sq.Update(DeliveryTable).
+		PlaceholderFormat(sq.Dollar).
+		Set(deliveryStatusColumn, "canceled").
+		Where(sq.Eq{idColumn: orderID}).
+		ToSql()
+	if err != nil {
+		return fmt.Errorf("op: %s, could not build update query: %w", op, err)
+	}
+	res, err = tx.Exec(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("op: %s, could not query row: %w", op, err)
 	}
 
 	err = tx.Commit(ctx)

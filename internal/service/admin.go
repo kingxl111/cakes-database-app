@@ -32,6 +32,11 @@ type adminTokenClaims struct {
 	AdminID int `json:"admin_id"`
 }
 
+func (s *AdminAuthorizationService) AddAdmin(username, password string) (int, error) {
+	password = generatePasswordHash(password)
+	return s.stg.AddAdmin(username, password)
+}
+
 func (s *AdminAuthorizationService) GenerateAdminToken(username, password string) (string, error) {
 	// get user from db
 	adminID, err := s.stg.GetAdmin(username, generatePasswordHash(password))
