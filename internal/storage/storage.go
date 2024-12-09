@@ -34,6 +34,7 @@ type UserCakeManager interface {
 }
 
 type AdminAuthorization interface {
+	AddAdmin(username, password string) (int, error)
 	GetAdmin(username, password_hash string) (int, error)
 }
 

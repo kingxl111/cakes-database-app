@@ -14,6 +14,37 @@ import (
 	"github.com/go-chi/render"
 )
 
+func (h *Handler) AddAdmin(ctx *context.Context, log *logrus.Logger) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const op = "handlers.admin.add-admin"
+		log := log.WithFields(logrus.Fields{
+			"op":   op,
+			"time": time.Now().Format(time.RFC3339),
+		})
+
+		var req models.Admin
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			log.Error(op, "can't decode body", err)
+			newErrorResponse(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		adminID, err := h.services.AddAdmin(req.Username, req.PasswordHash)
+		if err != nil {
+			log.Error(op, "can't add admin", err)
+			newErrorResponse(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+
+		log.Info(op, "added admin", adminID)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		if err := json.NewEncoder(w).Encode(adminID); err != nil {
+			log.Error(op, "can't encode response", err)
+		}
+	}
+}
+
 func (h *Handler) AdminSignIn(ctx *context.Context, log *logrus.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.admin.sign-in"

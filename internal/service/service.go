@@ -5,6 +5,7 @@ import (
 
 	"github.com/kingxl111/cakes-database-app/internal/models"
 	"github.com/kingxl111/cakes-database-app/internal/storage"
+	"github.com/kingxl111/cakes-database-app/internal/storage/s3"
 )
 
 type Service struct {
@@ -37,6 +38,7 @@ type CakeManager interface {
 }
 
 type AdminAuthorization interface {
+	AddAdmin(username, password string) (int, error)
 	GenerateAdminToken(username, password string) (string, error)
 	ParseAdminToken(accessToken string) (int, error)
 }
@@ -50,11 +52,11 @@ type AdminService interface {
 	RemoveCake(ctx context.Context, id int) error
 }
 
-func NewService(storage *storage.Storage) *Service {
+func NewService(storage *storage.Storage, s s3.ClientS3) *Service {
 	return &Service{
 		Authorization:      NewAuthService(storage),
 		OrderManager:       NewOrderService(storage),
-		CakeManager:        NewCakeService(storage),
+		CakeManager:        NewCakeService(storage, s),
 		AdminAuthorization: NewAdminAuthService(storage),
 		AdminService:       NewAdminService(storage),
 	}
