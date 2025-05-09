@@ -57,7 +57,7 @@ type AdminService interface {
 func NewService(storage *storage.Storage, s s3.ClientS3, rdb *redis.Client, tokenTTL time.Duration) *Service {
 	return &Service{
 		Authorization:      NewAuthService(storage, rdb, tokenTTL),
-		OrderManager:       NewOrderService(storage),
+		OrderManager:       NewOrderService(storage, rdb),
 		CakeManager:        NewCakeService(storage, s, rdb, tokenTTL),
 		AdminAuthorization: NewAdminAuthService(storage),
 		AdminService:       NewAdminService(storage),

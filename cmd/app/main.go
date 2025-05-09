@@ -25,6 +25,8 @@ import (
 //	envProd  = "prod"
 //)
 
+const ordersChan = "orders:events"
+
 func main() {
 	ctx := context.Background()
 
@@ -92,6 +94,16 @@ func main() {
 	}
 
 	services.Authorization = service.NewAuthService(storage.NewStorage(authDB), rdb, time.Second)
+
+	go func() {
+		sub := rdb.Subscribe(ctx, ordersChan)
+		defer sub.Close()
+
+		ch := sub.Channel()
+		for msg := range ch {
+			log.Printf("PubSub received on %s: %s\n", msg.Channel, msg.Payload)
+		}
+	}()
 
 	// run server
 	srv := &server.Server{}
