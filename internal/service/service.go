@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"github.com/go-redis/redis/v8"
+	"time"
 
 	"github.com/kingxl111/cakes-database-app/internal/models"
 	"github.com/kingxl111/cakes-database-app/internal/storage"
@@ -52,9 +54,9 @@ type AdminService interface {
 	RemoveCake(ctx context.Context, id int) error
 }
 
-func NewService(storage *storage.Storage, s s3.ClientS3) *Service {
+func NewService(storage *storage.Storage, s s3.ClientS3, rdb *redis.Client, tokenTTL time.Duration) *Service {
 	return &Service{
-		Authorization:      NewAuthService(storage),
+		Authorization:      NewAuthService(storage, rdb, tokenTTL),
 		OrderManager:       NewOrderService(storage),
 		CakeManager:        NewCakeService(storage, s),
 		AdminAuthorization: NewAdminAuthService(storage),

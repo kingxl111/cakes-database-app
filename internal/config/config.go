@@ -1,8 +1,11 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -13,6 +16,7 @@ type Config struct {
 	HTTPServer HTTPServer `yaml:"http_server"`
 	DB         DB         `yaml:"db"`
 	S3         S3         `yaml:"s3_config"`
+	Redis      Redis      `yaml:"redis"`
 }
 
 // HTTPServer type
@@ -41,6 +45,14 @@ type S3 struct {
 	SecretKey string
 	Region    string
 	PublicUrl string
+}
+
+type Redis struct {
+	Addr     string        `yaml:"addr" env:"REDIS_ADDR" env-default:"redis:6379"`
+	Password string        `yaml:"password" env:"REDIS_PASSWORD" env-default:"password"`
+	TokenTTL time.Duration `yaml:"token_ttl" env:"REDIS_TOKEN_TTL" env-default:"3600s"`
+	SessTTL  time.Duration `yaml:"session_ttl" env:"REDIS_SESSION_TTL" env-default:"86400s"`
+	CacheTTL time.Duration `yaml:"cache_ttl" env:"REDIS_CACHE_TTL" env-default:"300s"`
 }
 
 const (
@@ -95,6 +107,16 @@ func MustLoad() *Config {
 	cfg.S3.Region = os.Getenv(s3Region)
 	cfg.S3.Bucket = os.Getenv(s3Bucket)
 	cfg.S3.PublicUrl = os.Getenv(s3PublicURL)
+
+	cfg.Redis.Addr = os.Getenv("REDIS_ADDR")
+	cfg.Redis.Password = os.Getenv("REDIS_PASSWORD")
+
+	fmt.Println(cfg.Redis.Addr, cfg.Redis.Password)
+	if ttlSec, err := strconv.Atoi(os.Getenv("REDIS_TOKEN_TTL")); err == nil {
+		cfg.Redis.TokenTTL = time.Duration(ttlSec) * time.Second
+	} else {
+		cfg.Redis.TokenTTL = time.Hour
+	}
 
 	return &cfg
 }

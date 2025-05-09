@@ -144,7 +144,7 @@ def manage_cakes_page():
             st.text(f"ID: {cake['id']}, Вес: {cake['weight']} г")
 
             # Удалить торт
-            if st.button(f"Удалить {cake['description']}", key=cake['id']):
+            if st.button(f"Удалить {cake['description']}", key=cake['id']): 
                 delete_response = api_request("POST", f"/adm/manage-cakes/remove-cake", json={"id": cake["id"]})
                 if delete_response.status_code == 200:
                     st.success(f"{cake['description']} удален!")

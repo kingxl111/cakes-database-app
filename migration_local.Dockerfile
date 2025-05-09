@@ -17,7 +17,7 @@ WORKDIR /app
 
 ADD /internal/storage/migrations/*.sql migrations/
 ADD migration_local.sh .
-ADD local.env .
+ADD .env .
 
 RUN chmod +x migration_local.sh
 

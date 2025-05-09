@@ -17,11 +17,11 @@ $ migrate -path "/path/to/migrations" -database "postgres://user:password@localh
 # docker-compose
 up:
 ```bash
-sudo docker-compose --env-file local.env up --build
+sudo docker-compose --env-file .env up --build
 ```
 rm: 
 ```bash
-sudo docker-compose --env-file local.env down --rmi all --volumes
+sudo docker-compose --env-file .env down --rmi all --volumes
 ```
 env variables are loaded from local.env
 

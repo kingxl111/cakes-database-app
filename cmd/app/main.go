@@ -15,6 +15,7 @@ import (
 	"github.com/kingxl111/cakes-database-app/internal/service"
 	"github.com/kingxl111/cakes-database-app/internal/storage"
 
+	"github.com/go-redis/redis/v8"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 )
 
@@ -63,9 +64,19 @@ func main() {
 		log.Fatalf("failed to connect to s3 client: %s", err)
 	}
 
-	// all layers
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       0,
+	})
+	defer rdb.Close()
+
+	if err := rdb.Ping(ctx).Err(); err != nil {
+		log.Fatalf("redis ping failed: %v", err)
+	}
+
 	st := storage.NewStorage(db)
-	services := service.NewService(st, s3cl)
+	services := service.NewService(st, s3cl, rdb, time.Second)
 	router := server.NewHandler(services)
 
 	// for authorizer database role
@@ -79,8 +90,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to connect to database: %s", err)
 	}
-	// explicit
-	services.Authorization = service.NewAuthService(storage.NewStorage(authDB))
+
+	services.Authorization = service.NewAuthService(storage.NewStorage(authDB), rdb, time.Second)
 
 	// run server
 	srv := &server.Server{}
