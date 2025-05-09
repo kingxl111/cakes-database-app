@@ -2,8 +2,11 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"mime/multipart"
+	"time"
 
 	"github.com/kingxl111/cakes-database-app/internal/models"
 	"github.com/kingxl111/cakes-database-app/internal/storage"
@@ -11,27 +14,51 @@ import (
 )
 
 type CakeService struct {
-	stg  storage.UserCakeManager
-	serv s3.ClientS3
+	stg      storage.UserCakeManager
+	serv     s3.ClientS3
+	redis    *redis.Client
+	cacheTTL time.Duration
 }
 
-func NewCakeService(stg storage.UserCakeManager, serv s3.ClientS3) *CakeService {
+func NewCakeService(
+	stg storage.UserCakeManager,
+	serv s3.ClientS3,
+	rdb *redis.Client,
+	cacheTTL time.Duration,
+) *CakeService {
 	return &CakeService{
-		stg:  stg,
-		serv: serv,
+		stg:      stg,
+		serv:     serv,
+		redis:    rdb,
+		cacheTTL: cacheTTL,
 	}
 }
-
 func (c *CakeService) GetCakes() ([]models.Cake, error) {
+	ctx := context.Background()
+	cacheKey := "cache:cakes"
+
+	if data, err := c.redis.Get(ctx, cacheKey).Result(); err == nil {
+		var cakes []models.Cake
+		if err := json.Unmarshal([]byte(data), &cakes); err == nil {
+			return cakes, nil
+		}
+	}
+
 	cakes, err := c.stg.GetCakes()
 	if err != nil {
-		return cakes, err
+		return nil, err
 	}
-	for i, _ := range cakes {
-		imageUrl := c.serv.GetFileURL(cakes[i].Description)
-		cakes[i].ImageURL = imageUrl
+
+	for i := range cakes {
+		cakes[i].ImageURL = c.serv.GetFileURL(cakes[i].Description)
 	}
-	return cakes, err
+
+	b, err := json.Marshal(cakes)
+	if err == nil {
+		_ = c.redis.Set(ctx, cacheKey, b, c.cacheTTL).Err()
+	}
+
+	return cakes, nil
 }
 
 func (c *CakeService) GetCake(id int) (models.Cake, error) {

@@ -76,7 +76,7 @@ func main() {
 	}
 
 	st := storage.NewStorage(db)
-	services := service.NewService(st, s3cl, rdb, time.Second)
+	services := service.NewService(st, s3cl, rdb, cfg.Redis.CacheTTL)
 	router := server.NewHandler(services)
 
 	// for authorizer database role

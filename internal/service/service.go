@@ -58,7 +58,7 @@ func NewService(storage *storage.Storage, s s3.ClientS3, rdb *redis.Client, toke
 	return &Service{
 		Authorization:      NewAuthService(storage, rdb, tokenTTL),
 		OrderManager:       NewOrderService(storage),
-		CakeManager:        NewCakeService(storage, s),
+		CakeManager:        NewCakeService(storage, s, rdb, tokenTTL),
 		AdminAuthorization: NewAdminAuthService(storage),
 		AdminService:       NewAdminService(storage),
 	}
